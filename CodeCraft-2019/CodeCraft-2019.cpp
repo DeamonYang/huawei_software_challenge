@@ -5,16 +5,16 @@
 #include <vector>
 #include <queue>
 #include <algorithm>
+#include <map>
 
 #define MAX_LINE_LENGTH 256
 
 using namespace std;
 
 class Car {
-private:
+public:
 	int id, from, to, speed, planTime;
 
-public:
 	Car(int id, int from, int to, int speed, int planTime) {
 		this->id = id;
 		this->from = from;
@@ -25,10 +25,9 @@ public:
 };
 
 class Road {
-private:
+public:
 	int id, length, speed, channel, from, to, isDuplex;
 
-public:
 	Road(int id, int length, int speed, int channel, int from, int to, int isDuplex) {
 		this->id = id;
 		this->length = length;
@@ -41,10 +40,9 @@ public:
 };
 
 class Cross {
-private:
+public:
 	int id, roadId1, roadId2, roadId3, roadId4;
 
-public:
 	Cross(int id, int roadId1, int roadId2, int roadId3, int roadId4) {
 		this->id = id;
 		this->roadId1 = roadId1;
@@ -55,7 +53,7 @@ public:
 };
 
 class Answer {
-private:
+public:
 	int carId, StartTime;
 	queue<int> RoadId;
 };
@@ -69,10 +67,10 @@ int main(int argc, char *argv[])
 	ifstream froad("../config/road.txt", ios::in);
 	ifstream fcross("../config/cross.txt", ios::in);
 
-	// 用vector来存放 其实也可以考虑用一个大数组单次分配内存
-	vector<Car*> Cars;
-	vector<Road*> Roads;
-	vector<Cross*> Crosses;
+	// 用map来存放 方便后续查找
+	map<int, Car*> Cars;
+	map<int, Road*> Roads;
+	map<int, Cross*> Crosses;
 
 	// 读取并解析数据: Cars
 	char buffer[MAX_LINE_LENGTH];
@@ -93,7 +91,7 @@ int main(int argc, char *argv[])
 			}
 		}
 		// 初始化对象
-		Cars.push_back(new Car(value.at(0), value.at(1), value.at(2), value.at(3), value.at(4)));
+		Cars[value.at(0)] = new Car(value.at(0), value.at(1), value.at(2), value.at(3), value.at(4));
 	}
 
 	// 读取并解析数据: Roads
@@ -114,7 +112,7 @@ int main(int argc, char *argv[])
 			}
 		}
 		// 初始化对象
-		Roads.push_back(new Road(value.at(0), value.at(1), value.at(2), value.at(3), value.at(4), value.at(5), value.at(6)));
+		Roads[value.at(0)] = new Road(value.at(0), value.at(1), value.at(2), value.at(3), value.at(4), value.at(5), value.at(6));
 	}
 
 	// 读取并解析数据: Crosses
@@ -135,7 +133,7 @@ int main(int argc, char *argv[])
 			}
 		}
 		// 初始化对象
-		Crosses.push_back(new Cross(value.at(0), value.at(1), value.at(2), value.at(3), value.at(4)));
+		Crosses[value.at(0)] = new Cross(value.at(0), value.at(1), value.at(2), value.at(3), value.at(4));
 	}
 
 	// TODO:process
