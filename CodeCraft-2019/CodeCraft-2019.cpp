@@ -15,6 +15,7 @@ using namespace std;
 
 void read_data();
 void preprocess();
+void dispatch();
 
 int main(int argc, char *argv[])
 {
@@ -24,6 +25,9 @@ int main(int argc, char *argv[])
 
 	// data sample usage
 	cout << Cars[10000]->getCrossFrom()->id << endl;
+	for (auto cross = Crosses.begin(); cross != Crosses.end(); cross++) {
+		
+	}
 
 	// TODO:process
 	// TODO:write output file
@@ -105,4 +109,8 @@ void read_data() {
 
 void preprocess() {
 	// TODO: 生成邻接矩阵等数据预处理
+}
+
+void dispatch() {
+	// TODO: 调度车辆
 }
