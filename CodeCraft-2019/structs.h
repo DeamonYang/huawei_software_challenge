@@ -1,9 +1,11 @@
 #ifndef _STRUCTS_H_
 #define _STRUCTS_H_
 
-#include <map>
-#include <queue>
 #include <vector>
+#include <queue>
+#include <algorithm>
+#include <map>
+#include <list>
 
 using namespace std;
 
@@ -19,7 +21,7 @@ struct Car {
     // 车辆出发时间及行驶路径
     struct {
         int startTime;
-        queue<int> route;
+        vector<int> route;
     } answer;
     
     Car(int id, int from, int to, int speed, int planTime);
