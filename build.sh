@@ -52,4 +52,4 @@ then
     rm -f CodeCraft-code.tar.gz
 fi
 
-tar -zcPf CodeCraft-code.tar.gz *
+tar -zcPf CodeCraft-code.tar.gz CodeCraft-2019

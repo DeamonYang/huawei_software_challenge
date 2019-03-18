@@ -9,6 +9,8 @@
 
 using namespace std;
 
+typedef struct {int x, y;} int2;
+
 // Car和Road里的声明调用了Cross, 因此必须前置声明Cross
 struct Cross;
 
@@ -16,7 +18,12 @@ struct Car {
 	int id, from, to, speed, planTime;
     // 车辆状态
     struct {
-        int roadID, channelNum, location, nextRoadID, isWaitingDispatch;  // nextRoadId == -1 表示这辆车下个路口到达终点
+        // 对roadId 与 nextRoadId:
+        // -1: 终点
+        // -2: 起点
+        int roadID, nextRoadID;
+        // location: 1...length
+        int channelNum, location, isWaitingDispatch;
     } status;
     // 车辆出发时间及行驶路径
     struct {
@@ -29,6 +36,9 @@ struct Car {
     Cross* getCrossTo();
     void start();
     void finish();
+    int2 reachCross(Cross* cross);
+    void goThrough(int2 channel_length);
+
 };
 
 struct Road {
@@ -40,6 +50,9 @@ struct Road {
 	Road(int id, int length, int speed, int channel, int from, int to, int isDuplex);
     Cross* getCrossFrom();
     Cross* getCrossTo();
+    void dispatch();
+    // 获取进入当前道路时，当前道路内的可行驶距离
+    int2 getFreeLength(int fromCrossId);
 };
 
 struct Cross {
@@ -49,6 +62,7 @@ struct Cross {
 
 	Cross(int id, int roadId1, int roadId2, int roadId3, int roadId4);
     Road* getRoad(int num);
+    bool dispatch_finished();
 };
 
 // 系统调度时间

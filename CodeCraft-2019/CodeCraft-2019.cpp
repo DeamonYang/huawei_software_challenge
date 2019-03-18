@@ -10,33 +10,57 @@
 
 using namespace std;
 
+int currentTime = 0;
+unsigned int finished_cars = 0;
+queue<Car*> starting_cars;
+// 用map来存放 方便后续查找
+map<int, Car*> Cars;
+map<int, Road*> Roads;
+map<int, Cross*> Crosses;
+
 int **G, **D;
 
-void read_data();
+void read_data(string carPath, string roadPath, string crossPath);
 void preprocess();
-void dispatch();
-void output();
+void process();
+void output(string answerPath);
 vector<int> getRouteFloyd(int, int);
 
 int main(int argc, char *argv[])
 {
+	if (argc < 5) {
+		std::cout << "please input args: carPath, roadPath, crossPath, answerPath" << std::endl;
+		exit(1);
+	}
+	
+	std::string carPath(argv[1]);
+	std::string roadPath(argv[2]);
+	std::string crossPath(argv[3]);
+	std::string answerPath(argv[4]);
+	
+	std::cout << "carPath is " << carPath << std::endl;
+	std::cout << "roadPath is " << roadPath << std::endl;
+	std::cout << "crossPath is " << crossPath << std::endl;
+	std::cout << "answerPath is " << answerPath << std::endl;
+	
 	// read input filebuf
-	read_data();
+	read_data(carPath, roadPath, crossPath);
 	preprocess();
 
-	// TODO:process
+	// process
+	// process();
 	// write output file
-	output();
+	output(answerPath);
 
 	return 0;
 }
 
-void read_data() {
+void read_data(string carPath, string roadPath, string crossPath) {
 	cout << "Begin Reading data!" << endl;
 
-	ifstream fcar("../config/car.txt");
-	ifstream froad("../config/road.txt");
-	ifstream fcross("../config/cross.txt");
+	ifstream fcar(carPath.c_str());
+	ifstream froad(roadPath.c_str());
+	ifstream fcross(crossPath.c_str());
 
 	// 读取并解析数据: Cars
 	char buffer[MAX_LINE_LENGTH];
@@ -106,17 +130,34 @@ void read_data() {
 vector<int> getRouteFloyd(int from, int to) {
 	int i = from, j = to;
 	vector<int> v;
-	v.push_back(i);
 	if (D[i][j] != j) {
 		int k = D[i][j];
 		vector<int> v1, v2;
 		v1 = getRouteFloyd(i, k);
 		v2 = getRouteFloyd(k, j);
-		v.clear();
-		v.insert(v.end(),v1.begin(),v1.end()-1);
-		v.insert(v.end(),v2.begin(),v2.end()-1);
+		v.insert(v.end(),v1.begin(),v1.end());
+		v.insert(v.end(),v2.begin(),v2.end());
 	}
-	v.push_back(j);
+	else {
+		Cross* cross_from = Crosses[from];
+		for (int i = 0; i < 4; i++) {
+			Road* road = cross_from->getRoad(i);
+			if (road == nullptr) {
+				continue;
+			}
+			else if (road->from == from && road->to == to) {
+				v.push_back(road->id);
+				break;
+			}
+			else if (road->to == from && road->isDuplex == 1 && road->from == to) {
+				v.push_back(road->id);
+				break;
+			}
+			else if (i == 3) {
+				cout << "ERROR!" << endl;
+			}
+		}
+	}
 	return v;
 }
 
@@ -178,17 +219,49 @@ void preprocess() {
 	}
 }
 
-void dispatch() {
+void process() {
 	// TODO: 调度车辆
+	for (currentTime = 1; finished_cars < Cars.size(); currentTime++) {
+		for (auto it = Crosses.begin(); it != Crosses.end(); it++) {
+			Cross* cross = it->second;
+			for (int i = 0; cross->dispatch_finished() == false; ++i %= 4) {
+				Road* road = cross->getRoad(i);
+				if (road == nullptr) {  // 道路不存在
+					continue;
+				}
+				else if (road->to == cross->id && road->isDuplex == 0) {  // 单行道，无法进入
+					continue;
+				}
+
+				for (auto channel = cross->channelsToRoad[i].begin(); channel != cross->channelsToRoad[i].end(); channel++) {
+				    Car* car = (*channel)->front();
+					int2 tmp = car->reachCross(cross);
+					switch (tmp.y) {
+						case -1: 
+							break;
+						case 0:
+							car->status.location = Roads[car->status.roadID]->length;
+						default:
+							car->goThrough(tmp);
+					}
+				}
+				
+				// 要开始行驶的车进入
+
+			}
+		}
+	}
 }
 
-void output() {
-	ofstream fanswer("../config/answer.txt");
+void output(string answerPath) {
+	ofstream fanswer(answerPath.c_str());
 	fanswer << "#(carId,StartTime,RoadId...)" << endl;
 	for (auto it = Cars.begin(); it != Cars.end(); it++) {
 		Car* car = it->second;
 		fanswer << "(" << car->id << ", ";
-		fanswer << car->answer.startTime;
+		// fanswer << car->answer.startTime;
+		fanswer << car->planTime + (car->id-10000)*10;
+		// fanswer << car->planTime*car->planTime*car->planTime*car->planTime;
 		for (auto it2 = car->answer.route.begin(); it2 != car->answer.route.end(); it2++) {
 			fanswer << ", " << *it2;
 		}
