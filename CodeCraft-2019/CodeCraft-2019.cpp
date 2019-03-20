@@ -241,9 +241,8 @@ void dispatchCarsInGarage() {
 	for (auto it = CarsReady.begin(); it != CarsReady.end(); it++) {
 		Car* car = *it;
 		if ((car->planTime + (int)((car->id-10000)*0.09)) <= currentTime) {
-			int road_id = nextRoad[car->from][car->to];
 			static int times = 0;
-			if (car->start(road_id) == false) cout << "Start car failed! (crowded)" << ++times << endl;
+			if (car->start() == false) cout << "Start car failed! (crowded)" << ++times << endl;
 			else {
 				CarsRunning.push_back(car);
 				it-- = CarsReady.erase(it);

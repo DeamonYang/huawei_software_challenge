@@ -42,7 +42,7 @@ struct Car {
     } answer;
     
     Car(int id, int from, int to, int speed, int planTime);
-    bool start(int road_id);
+    bool start();
     void finish();
     int2 reachCross(Cross* cross);
     void goThrough(int2 channel_length);
@@ -87,5 +87,7 @@ extern list<Car*> CarsNotReady, CarsReady, CarsRunning, CarsFinished;
 extern map<int, Car*> Cars;
 extern map<int, Road*> Roads;
 extern map<int, Cross*> Crosses;
+
+extern int **G, **D, **nextRoad;
 
 #endif

@@ -12,7 +12,8 @@ Car::Car(int id, int from, int to, int speed, int planTime) {
     Car::status.roadID = -2;
 }
 
-bool Car::start(int road_id) {
+bool Car::start() {
+    int road_id = nextRoad[from][to];
     int2 tmp = Roads[road_id]->getFreeLength(from);
     // 路口拥堵的话，无法发车
     if (tmp.x == -1) return false;
