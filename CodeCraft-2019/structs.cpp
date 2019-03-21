@@ -20,6 +20,7 @@ bool Car::start() {
 
     answer.startTime = currentTime;
     answer.stopTime = currentTime;
+    answer.route.push_back(road_id);
     status.roadID = road_id;
     status.channelNum = tmp.x;
     // assert(tmp.y > 0);

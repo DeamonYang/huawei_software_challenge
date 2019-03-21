@@ -226,7 +226,6 @@ void dispatchCarsOnRoad() {
 
 void dispatchCarsInGarage() {
 	// 模拟fake_process里面的算法
-	if (currentTime < 10) return;
 	if (CarsReady.size() == 0) return;
 	for (auto it = CarsReady.begin(); it != CarsReady.end(); ) {
 		Car* car = *it;
