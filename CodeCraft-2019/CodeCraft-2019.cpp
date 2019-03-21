@@ -34,6 +34,7 @@ int getNextRoadFloyd(int, int);
 bool dispatchFirstCar(Cross*, Road*, Lane*);
 void dispatchFollowingCars(Lane*);
 void fake_process();
+void refreshCarsReady();
 
 int main(int argc, char *argv[])
 {
@@ -93,7 +94,7 @@ void read_data(string carPath, string roadPath, string crossPath) {
 	char buffer[MAX_LINE_LENGTH];
 	while (fcar.getline(buffer, MAX_LINE_LENGTH)) {
 		if (buffer[0] == '#') continue;
-		int int_start, len = strlen(buffer);
+		int int_start = 0, len = strlen(buffer);
 		vector<int> value;
 		for (int i = 0; i < len; i++) {
 			// 每个数字前面的字符都为'('或' '
@@ -119,7 +120,7 @@ void read_data(string carPath, string roadPath, string crossPath) {
 	// 读取并解析数据: Roads
 	while (froad.getline(buffer, MAX_LINE_LENGTH)) {
 		if (buffer[0] == '#') continue;
-		int int_start, len = strlen(buffer);
+		int int_start = 0, len = strlen(buffer);
 		vector<int> value;
 		for (int i = 0; i < len; i++) {
 			// 每个数字前面的字符都为'('或' '
@@ -142,7 +143,7 @@ void read_data(string carPath, string roadPath, string crossPath) {
 	// 读取并解析数据: Crosses
 	while (fcross.getline(buffer, MAX_LINE_LENGTH)) {
 		if (buffer[0] == '#') continue;
-		int int_start, len = strlen(buffer);
+		int int_start = 0, len = strlen(buffer);
 		vector<int> value;
 		for (int i = 0; i < len; i++) {
 			// 每个数字前面的字符都为'('或' '
@@ -183,18 +184,7 @@ void process() {
 	// 开始进行系统调度
 	for (currentTime = 1; CarsFinished.size() < Cars.size(); currentTime++) {
 		// 更新CarsReady
-		for (auto it = CarsNotReady.begin(); it != CarsNotReady.end(); it++) {
-			if ((*it)->planTime <= currentTime) {
-				CarsReady.push_back(*it);
-				it-- = CarsNotReady.erase(it);
-			}
-		}
-		// 对所有已准备好出发的车辆按照最大速度进行排序
-		// CarsReady.sort(compCarSpeed);
-		
-		// 对所有已准备好出发的车辆按照id排序
-		CarsReady.sort(compCarId);
-
+		refreshCarsReady();
 		// 更新路径矩阵
 		floyd();
 
@@ -238,15 +228,21 @@ void dispatchCarsInGarage() {
 	// 模拟fake_process里面的算法
 	if (currentTime < 10) return;
 	if (CarsReady.size() == 0) return;
-	for (auto it = CarsReady.begin(); it != CarsReady.end(); it++) {
+	for (auto it = CarsReady.begin(); it != CarsReady.end(); ) {
 		Car* car = *it;
 		if ((car->planTime + (int)((car->id-10000)*0.09)) <= currentTime) {
-			static int times = 0;
-			if (car->start() == false) cout << "Start car failed! (crowded)" << ++times << endl;
-			else {
+			if (car->start()) {
 				CarsRunning.push_back(car);
-				it-- = CarsReady.erase(it);
+				it = CarsReady.erase(it);
 			}
+			else {
+				static int times = 0;
+				cout << "Start car failed! (crowded)" << ++times << endl;
+				it++;
+			}
+		}
+		else {
+			it++;
 		}
 	}
 }
@@ -324,6 +320,24 @@ int getNextRoadFloyd(int from, int to) {
 		}
 	}
 	return -2;  // ERROR
+}
+
+void refreshCarsReady() {
+	if (CarsNotReady.size() == 0) return;
+	for (auto it = CarsNotReady.begin(); it != CarsNotReady.end(); ) {
+		if (true) {  //(*it)->planTime <= currentTime) {
+			CarsReady.push_back(*it);
+			it = CarsNotReady.erase(it);
+		}
+		else {
+			it++;
+		}
+	}
+	// 对所有已准备好出发的车辆按照最大速度进行排序
+	// CarsReady.sort(compCarSpeed);
+	
+	// 对所有已准备好出发的车辆按照id排序
+	// CarsReady.sort(compCarId);
 }
 
 void floyd() {
@@ -447,8 +461,8 @@ bool dispatchFirstCar(Cross* cross, Road* road, Lane* lane) {
 }
 
 void dispatchFollowingCars(Lane* lane) {
-	Road* currentRoad;
-	Car *car, *front_car;
+	Road* currentRoad = nullptr;
+	Car *car, *front_car = nullptr;
 	for (auto it = lane->carsOnLane.begin(); it != lane->carsOnLane.end(); it++) {
 		if (it == lane->carsOnLane.begin()) {
 			front_car = *it;
