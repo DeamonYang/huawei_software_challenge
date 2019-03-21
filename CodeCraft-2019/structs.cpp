@@ -30,13 +30,7 @@ bool Car::start() {
 }
 void Car::finish() {
     answer.stopTime = currentTime;
-    for (auto it = CarsRunning.begin(); it != CarsRunning.end(); it++) {
-        if ((*it)->id == id) {
-            CarsFinished.push_back(*it);
-            CarsRunning.erase(it);
-            break;
-        }
-    }
+    finished_cars++;
     Roads[status.roadID]->roadMap.at(status.channelNum).carsOnLane.pop_front();
 }
 
@@ -126,16 +120,13 @@ bool Road::isCrowded(Cross* cross) {
     // else if (cross->id == to && isDuplex == 1) {
     //     index = channel;
     // }
-    // // assert(index != -1);
+    // assert(index != -1);
 
-    // bool flag = true;
     // for (int i = index; i < index + channel; i++) {
-    //     if (roadMap[i].carsOnLane.front()->status.location < length) {
-    //         flag = false;
-    //         break;
-    //     }
+    //     if (roadMap[i].carsOnLane.empty()) return false;
+    //     if (roadMap[i].carsOnLane.front()->status.location < length) return false;
     // }
-    // return flag;
+    // return true;
     return false;
 }
 

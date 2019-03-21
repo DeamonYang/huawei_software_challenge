@@ -82,7 +82,8 @@ struct Cross {
 
 // 系统调度时间
 extern int currentTime;
-extern list<Car*> CarsNotReady, CarsReady, CarsRunning, CarsFinished;
+extern unsigned finished_cars;
+extern list<Car*> CarsNotReady, CarsReady;
 // 储存数据的全局变量
 extern map<int, Car*> Cars;
 extern map<int, Road*> Roads;

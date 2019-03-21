@@ -11,7 +11,8 @@
 using namespace std;
 
 int currentTime = 0;
-list<Car*> CarsNotReady, CarsReady, CarsRunning, CarsFinished;
+unsigned finished_cars = 0;
+list<Car*> CarsNotReady, CarsReady;
 // 用map来存放 方便后续查找
 map<int, Car*> Cars;
 map<int, Road*> Roads;
@@ -72,8 +73,8 @@ int main(int argc, char *argv[])
 	#ifdef DEBUG
 	end = clock();
 	int total_car_time = 0;
-	for (auto it = CarsFinished.begin(); it != CarsFinished.end(); it++) {
-		total_car_time += ((*it)->answer.stopTime - (*it)->answer.startTime);
+	for (auto it = Cars.begin(); it != Cars.end(); it++) {
+		total_car_time += (it->second->answer.stopTime - it->second->answer.startTime);
 	}
 	cout << "系统调度时间: " << currentTime - 1 << endl;
 	cout << "所有车辆总调度时间: " << total_car_time << endl;
@@ -182,7 +183,7 @@ void process() {
 	// 对所有车辆按照准备出发时间进行排序
 	// CarsNotReady.sort(compCarPlantime);
 	// 开始进行系统调度
-	for (currentTime = 1; CarsFinished.size() < Cars.size(); currentTime++) {
+	for (currentTime = 1; finished_cars < Cars.size(); currentTime++) {
 		// 更新CarsReady
 		refreshCarsReady();
 		// 更新路径矩阵
@@ -214,7 +215,7 @@ void dispatchCarsOnRoad() {
 				if (lane->dispatchedTimes == currentTime) {
 					continue;
 				}
-
+				
 				if (dispatchFirstCar(cross, road, lane)) {
 					dispatched_lanes++;
 					lane->dispatchedTimes++;
@@ -231,7 +232,6 @@ void dispatchCarsInGarage() {
 		Car* car = *it;
 		if ((car->planTime + (int)((car->id-10000)*0.09)) <= currentTime) {
 			if (car->start()) {
-				CarsRunning.push_back(car);
 				it = CarsReady.erase(it);
 			}
 			else {
@@ -296,6 +296,9 @@ vector<int> getRouteFloyd(int from, int to) {
 
 int getNextRoadFloyd(int from, int to) {
 	int i = from, j = to;
+	// if (i == 1 && j == 24) {
+	// 	int a = 0;
+	// }
 	if (i == j) {
 		return -1;  // 到达终点
 	}
@@ -318,7 +321,8 @@ int getNextRoadFloyd(int from, int to) {
 			}
 		}
 	}
-	return -2;  // ERROR
+	assert(0);
+	return -3;  // ERROR
 }
 
 void refreshCarsReady() {
@@ -362,11 +366,11 @@ void floyd() {
 			G[road->from][road->to] = road->length;
 		}
 
-		if (road->isCrowded(Crosses[road->to])) {
+		if (road->isDuplex == 0 || road->isCrowded(Crosses[road->to])) {
 			G[road->to][road->from] = MAX_ROAD_LENGTH;
 		}
 		else {
-			G[road->to][road->from] = road->isDuplex ? road->length : MAX_ROAD_LENGTH;
+			G[road->to][road->from] = road->length;
 		}
 	}
 
@@ -415,13 +419,26 @@ bool dispatchFirstCar(Cross* cross, Road* road, Lane* lane) {
 	}
 	// 取车道里最靠前的一辆车为研究对象
 	Car* car = lane->carsOnLane.front();
+
 	// 这辆车是从上一条路跑来的，相当于原先车道是空的
 	if (car->answer.stopTime == currentTime) {
 		return true;
 	}
 
 	// 讨论这辆车能否到达或是通过前面的路口
-	car->status.nextRoadID = nextRoad[cross->id][car->to];  // 这里有重复，应当优化
+	car->status.nextRoadID = nextRoad[cross->id][car->to];
+	if (car->status.nextRoadID == car->status.roadID) {
+		// 不能掉头，换一条路
+		Road* road;
+		for (int i = 0; i < 4; i++) {
+			if ((road = cross->getRoad(i)) != nullptr && road->id != car->status.nextRoadID) {
+				car->status.nextRoadID = road->id;
+				break;
+			}
+		}
+	}
+	assert(car->status.nextRoadID != car->status.roadID);
+	
 	// 如果没有下一条路，即前方路口是终点
 	if (car->status.nextRoadID == -1) {
 		Road* currentRoad = Roads[car->status.roadID];
