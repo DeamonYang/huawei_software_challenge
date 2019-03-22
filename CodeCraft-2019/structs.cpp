@@ -12,12 +12,22 @@ Car::Car(int id, int from, int to, int speed, int planTime) {
     Car::status.roadID = -2;
 }
 
+bool Car::ready() {
+    if ((planTime + (int)((id-10000)*0.09)) > currentTime) return false;
+    else return true;
+}
+
 bool Car::start() {
+    // 决定是否发车
+    if (!ready()) return false;
+    // if ((planTime + (int)((id-10000)*0.09)) > currentTime) return false;
+
     int road_id = nextRoad[from][to];
     int2 tmp = Roads[road_id]->getFreeLength(from);
     // 路口拥堵的话，无法发车
     if (tmp.x == -1) return false;
 
+    // 发车
     answer.startTime = currentTime;
     answer.stopTime = currentTime;
     answer.route.push_back(road_id);
@@ -108,6 +118,9 @@ int2 Road::getFreeLength(int fromCrossId) {
         }
     }
     // 所有车道均拥堵
+    #ifdef DEBUG
+    printf("crossId: %d, roadId: %d, isDuplex: %d\n", fromCrossId, id, isDuplex);
+    #endif
     return {-1, 0};
 }
 

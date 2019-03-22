@@ -230,15 +230,8 @@ void dispatchCarsInGarage() {
 	if (CarsReady.size() == 0) return;
 	for (auto it = CarsReady.begin(); it != CarsReady.end(); ) {
 		Car* car = *it;
-		if ((car->planTime + (int)((car->id-10000)*0.09)) <= currentTime) {
-			if (car->start()) {
-				it = CarsReady.erase(it);
-			}
-			else {
-				static int times = 0;
-				cout << "Start car failed! (crowded)" << ++times << endl;
-				it++;
-			}
+		if (car->start()) {
+			it = CarsReady.erase(it);
 		}
 		else {
 			it++;

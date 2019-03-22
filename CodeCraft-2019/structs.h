@@ -42,6 +42,7 @@ struct Car {
     } answer;
     
     Car(int id, int from, int to, int speed, int planTime);
+    bool ready();
     bool start();
     void finish();
     int2 reachCross(Cross* cross);
