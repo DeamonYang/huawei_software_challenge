@@ -13,7 +13,7 @@ Car::Car(int id, int from, int to, int speed, int planTime) {
 }
 
 bool Car::ready() {
-    if ((planTime + (int)((id-10000)*0.09)) > currentTime) return false;
+    if ((planTime + (int)((id-10000)*0.06)) > currentTime) return false;
     else return true;
     // return true;
 }
@@ -99,7 +99,6 @@ Road::Road(int id, int length, int speed, int channel, int from, int to, int isD
         roadMap[i].road_id = id;
         roadMap[i].channel_index = i;
     }
-    lastRoadMap = roadMap;
     #endif
 }
 

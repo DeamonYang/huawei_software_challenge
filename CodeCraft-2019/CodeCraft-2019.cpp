@@ -185,12 +185,10 @@ void process() {
 	// 开始进行系统调度
 	for (currentTime = 1; finished_cars < Cars.size(); currentTime++) {
 		#ifdef DEBUG
-		static int times = 0;
-		cout << "currentTime: " << currentTime << " times: " << times << endl;;
-		// lastRoadMap的更新大概增加了 %的运行时间
-		for (auto it = Roads.begin(); it != Roads.end(); it++) {
-			Road* road = it->second;
-			road->lastRoadMap = road->roadMap;
+		cout << "currentTime: " << currentTime << endl;;
+		vector<int2> status;
+		for (auto it = CarsRunning.begin(); it != CarsRunning.end(); it++) {
+			status.push_back({(*it)->status.roadID, (*it)->status.location});
 		}
 		#endif
 		// 更新CarsReady
@@ -198,39 +196,26 @@ void process() {
 		// 更新路径矩阵
 		floyd();
 
-		if (currentTime == 974) {
-			int a = 0;
-		}
-
 		// 对道路上的车进行调度
 		dispatchCarsOnRoad();
 		// 启动一些尚未出发的车
 		dispatchCarsInGarage();
 
 		#ifdef DEBUG
-		int flag = false;
-		for (auto it = Roads.begin(); it != Roads.end(); it++) {
-			Road* road = it->second;
-			assert(!road->roadMap.empty());
-			for (unsigned j = 0; j < road->roadMap.size(); j++) {
-				Lane* lane = &road->roadMap.at(j);
-				Lane* lastLane = &road->lastRoadMap.at(j);
-				if (!lane->carsOnLane.empty() && lane->carsOnLane.size() == lastLane->carsOnLane.size()) {
-					if (!flag) flag = true;
-					for (auto it_0 = lane->carsOnLane.begin(), it_1 = lastLane->carsOnLane.begin(); it_0 != lane->carsOnLane.end(); it_0++, it_1++) {
-						if ((*it_0)->id != (*it_1)->id) {
-							times = 0;
-							goto the_end;
-						}
-					}
+		int i = 0, lock_flag = 0;
+		if (!status.empty() && status.size() == CarsRunning.size()) {
+			lock_flag = 1;
+			for (auto it = CarsRunning.begin(); it != CarsRunning.end(); it++, i++) {
+				if (status[i].x != (*it)->status.roadID || status[i].y != (*it)->status.location) {
+					lock_flag = 0;
+					break;
 				}
 			}
 		}
-		if (flag && ++times > 50) {  // 时间阈值理论上应为一辆车通过一条路的最长时间，但那样太过低效
+		if (lock_flag) {
 			cout << "死锁!!!" << endl;
 			exit(1);
 		}
-		the_end:;
 		#endif
 	}
 }
@@ -328,9 +313,6 @@ vector<int> getRouteFloyd(int from, int to) {
 
 int getNextRoadFloyd(int from, int to) {
 	int i = from, j = to;
-	// if (i == 1 && j == 24) {
-	// 	int a = 0;
-	// }
 	if (i == j) {
 		return -1;  // 到达终点
 	}

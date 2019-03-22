@@ -63,9 +63,6 @@ struct Road {
     // 储存路上汽车情况，每个队列表示一个车道
     // 队列顺序: 先正方向后反方向，每个方向都按车道号由小向大排
     vector<Lane> roadMap;
-    #ifdef DEBUG
-    vector<Lane> lastRoadMap;
-    #endif
 
 	Road(int id, int length, int speed, int channel, int from, int to, int isDuplex);
     // 获取进入当前道路时，当前道路内的可行驶距离
