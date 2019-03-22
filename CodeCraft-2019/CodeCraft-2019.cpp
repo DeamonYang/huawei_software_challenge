@@ -12,7 +12,7 @@ using namespace std;
 
 int currentTime = 0;
 unsigned finished_cars = 0;
-list<Car*> CarsNotReady, CarsReady;
+list<Car*> CarsNotReady, CarsReady, CarsRunning;
 // 用map来存放 方便后续查找
 map<int, Car*> Cars;
 map<int, Road*> Roads;
@@ -54,10 +54,10 @@ int main(int argc, char *argv[])
 	std::cout << "crossPath is " << crossPath << std::endl;
 	std::cout << "answerPath is " << answerPath << std::endl;
 	
-	#ifdef DEBUG
+	// #ifdef DEBUG
 	clock_t start, end;
 	start = clock();
-	#endif
+	// #endif
 
 	// read input filebuf
 	read_data(carPath, roadPath, crossPath);
@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
 	output(answerPath);
 
 	// print information
-	#ifdef DEBUG
+	// #ifdef DEBUG
 	end = clock();
 	int total_car_time = 0;
 	for (auto it = Cars.begin(); it != Cars.end(); it++) {
@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
 	cout << "系统调度时间: " << currentTime - 1 << endl;
 	cout << "所有车辆总调度时间: " << total_car_time << endl;
 	cout << "程序运行时间: " << (end - start)/1000 << endl;
-	#endif
+	// #endif
 
 	return 0;
 }
@@ -184,15 +184,54 @@ void process() {
 	// CarsNotReady.sort(compCarPlantime);
 	// 开始进行系统调度
 	for (currentTime = 1; finished_cars < Cars.size(); currentTime++) {
+		#ifdef DEBUG
+		static int times = 0;
+		cout << "currentTime: " << currentTime << " times: " << times << endl;;
+		// lastRoadMap的更新大概增加了 %的运行时间
+		for (auto it = Roads.begin(); it != Roads.end(); it++) {
+			Road* road = it->second;
+			road->lastRoadMap = road->roadMap;
+		}
+		#endif
 		// 更新CarsReady
 		refreshCarsReady();
 		// 更新路径矩阵
 		floyd();
 
+		if (currentTime == 974) {
+			int a = 0;
+		}
+
 		// 对道路上的车进行调度
 		dispatchCarsOnRoad();
 		// 启动一些尚未出发的车
 		dispatchCarsInGarage();
+
+		#ifdef DEBUG
+		int flag = false;
+		for (auto it = Roads.begin(); it != Roads.end(); it++) {
+			Road* road = it->second;
+			assert(!road->roadMap.empty());
+			for (unsigned j = 0; j < road->roadMap.size(); j++) {
+				Lane* lane = &road->roadMap.at(j);
+				Lane* lastLane = &road->lastRoadMap.at(j);
+				if (!lane->carsOnLane.empty() && lane->carsOnLane.size() == lastLane->carsOnLane.size()) {
+					if (!flag) flag = true;
+					for (auto it_0 = lane->carsOnLane.begin(), it_1 = lastLane->carsOnLane.begin(); it_0 != lane->carsOnLane.end(); it_0++, it_1++) {
+						if ((*it_0)->id != (*it_1)->id) {
+							times = 0;
+							goto the_end;
+						}
+					}
+				}
+			}
+		}
+		if (flag && ++times > 50) {  // 时间阈值理论上应为一辆车通过一条路的最长时间，但那样太过低效
+			cout << "死锁!!!" << endl;
+			exit(1);
+		}
+		the_end:;
+		#endif
 	}
 }
 
@@ -314,7 +353,7 @@ int getNextRoadFloyd(int from, int to) {
 			}
 		}
 	}
-	assert(0);
+	// assert(0);
 	return -3;  // ERROR
 }
 
@@ -430,7 +469,7 @@ bool dispatchFirstCar(Cross* cross, Road* road, Lane* lane) {
 			}
 		}
 	}
-	assert(car->status.nextRoadID != car->status.roadID);
+	// assert(car->status.nextRoadID != car->status.roadID);
 	
 	// 如果没有下一条路，即前方路口是终点
 	if (car->status.nextRoadID == -1) {

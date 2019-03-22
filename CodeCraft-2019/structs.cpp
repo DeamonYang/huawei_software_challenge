@@ -15,12 +15,12 @@ Car::Car(int id, int from, int to, int speed, int planTime) {
 bool Car::ready() {
     if ((planTime + (int)((id-10000)*0.09)) > currentTime) return false;
     else return true;
+    // return true;
 }
 
 bool Car::start() {
     // 决定是否发车
     if (!ready()) return false;
-    // if ((planTime + (int)((id-10000)*0.09)) > currentTime) return false;
 
     int road_id = nextRoad[from][to];
     int2 tmp = Roads[road_id]->getFreeLength(from);
@@ -36,12 +36,19 @@ bool Car::start() {
     // assert(tmp.y > 0);
     status.location = tmp.y > speed ? speed : tmp.y;
     Roads[status.roadID]->roadMap.at(status.channelNum).carsOnLane.push_back(this);
+    CarsRunning.push_back(this);
     return true;
 }
 void Car::finish() {
     answer.stopTime = currentTime;
     finished_cars++;
     Roads[status.roadID]->roadMap.at(status.channelNum).carsOnLane.pop_front();
+    for (auto it = CarsRunning.begin(); it != CarsRunning.end(); it++) {
+        if ((*it)->id == id) {
+            CarsRunning.erase(it);
+            break;
+        }
+    }
 }
 
 // return: 
@@ -92,6 +99,7 @@ Road::Road(int id, int length, int speed, int channel, int from, int to, int isD
         roadMap[i].road_id = id;
         roadMap[i].channel_index = i;
     }
+    lastRoadMap = roadMap;
     #endif
 }
 
@@ -119,7 +127,7 @@ int2 Road::getFreeLength(int fromCrossId) {
     }
     // 所有车道均拥堵
     #ifdef DEBUG
-    printf("crossId: %d, roadId: %d, isDuplex: %d\n", fromCrossId, id, isDuplex);
+    // printf("crossId: %d, roadId: %d, isDuplex: %d\n", fromCrossId, id, isDuplex);
     #endif
     return {-1, 0};
 }
