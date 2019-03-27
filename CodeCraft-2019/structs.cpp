@@ -13,13 +13,45 @@ Car::Car(int id, int from, int to, int speed, int planTime) {
 }
 
 bool Car::ready() {
-    if ((planTime + (int)((id-10000)*0.06)) > currentTime) return false;
-    else return true;
+    // static int time = 0, startedCars = 0;
+    // if (time < currentTime) {
+    //     time = currentTime;
+    //     // printf("%d\n", startedCars);
+    //     startedCars = 0;
+    // }
+    // if (startedCars * log(currentTime) > 24) return false;
+    int next_road = nextRoad[from][to];
+    // Road* road = Roads[next_road];
+    // int index = -1;
+    // if (from == road->from) {
+    //     index = 0;
+    // }
+    // else if (from == road->to && road->isDuplex == 1) {
+    //     index = road->channel;
+    // }
+    // // assert(index != -1);
+    // if (road->roadMap[index].carsOnLane.empty()) {
+    //     startedCars++;
+    //     return true;
+    // }
+    // int max_speed = speed > road->speed ? road->speed : speed;
+    // if (road->roadMap[index].carsOnLane.back()->status.location > max_speed) {
+    //     startedCars++;
+    //     return true;
+    // }
+    // return false;
+
+
+    return Roads[next_road]->isEmpty(from);
+    // return !Roads[next_road]->isCrowded(from);
+    // if ((planTime + (int)((id-10000)*0.15)) > currentTime) return false;
+    // else return true;
     // return true;
 }
 
 bool Car::start() {
     // 决定是否发车
+    if (currentTime < planTime) return false;
     if (!ready()) return false;
 
     int road_id = nextRoad[from][to];
@@ -131,23 +163,41 @@ int2 Road::getFreeLength(int fromCrossId) {
     return {-1, 0};
 }
 
-bool Road::isCrowded(Cross* cross) {
-    // if (currentTime <= 1) return false;  // 留给fake_floyd用的
-    // int index = -1;
-    // if (cross->id == from) {
-    //     index = 0;
-    // }
-    // else if (cross->id == to && isDuplex == 1) {
-    //     index = channel;
-    // }
-    // assert(index != -1);
+bool Road::isCrowded(int cross_id) {
+    int index = -1;
+    if (cross_id == from) {
+        index = 0;
+    }
+    else if (cross_id == to && isDuplex == 1) {
+        index = channel;
+    }
+    assert(index != -1);
 
     // for (int i = index; i < index + channel; i++) {
     //     if (roadMap[i].carsOnLane.empty()) return false;
     //     if (roadMap[i].carsOnLane.front()->status.location < length) return false;
     // }
-    // return true;
-    return false;
+    if (roadMap[index].carsOnLane.empty()) return false;
+    if (roadMap[index].carsOnLane.back()->status.location > length*0.4) return false;
+    return true;
+}
+
+bool Road::isEmpty(int cross_id) {
+    int index = -1;
+    if (cross_id == from) {
+        index = 0;
+    }
+    else if (cross_id == to && isDuplex == 1) {
+        index = channel;
+    }
+    assert(index != -1);
+
+    for (int i = index; i < index + channel; i++) {
+        if (!roadMap[i].carsOnLane.empty()) {
+            return false;
+        }
+    }
+    return true;
 }
 
 // Cross

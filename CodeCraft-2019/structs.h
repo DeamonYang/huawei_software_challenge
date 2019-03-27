@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <map>
 #include <list>
+#include <cmath>
 
 // #ifdef DEBUG
 #include <assert.h>
@@ -64,10 +65,14 @@ struct Road {
     // 队列顺序: 先正方向后反方向，每个方向都按车道号由小向大排
     vector<Lane> roadMap;
 
+    // 权重，用来衡量拥挤程度
+    double length_weight[2] = {1, 1};
+
 	Road(int id, int length, int speed, int channel, int from, int to, int isDuplex);
     // 获取进入当前道路时，当前道路内的可行驶距离
     int2 getFreeLength(int fromCrossId);
-    bool isCrowded(Cross* cross);
+    bool isCrowded(int cross_id);
+    bool isEmpty(int cross_id);
 };
 
 struct Cross {

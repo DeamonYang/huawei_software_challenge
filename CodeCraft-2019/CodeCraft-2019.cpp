@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
 	end = clock();
 	int total_car_time = 0;
 	for (auto it = Cars.begin(); it != Cars.end(); it++) {
-		total_car_time += (it->second->answer.stopTime - it->second->answer.startTime);
+		total_car_time += (it->second->answer.stopTime - it->second->planTime);
 	}
 	cout << "系统调度时间: " << currentTime - 1 << endl;
 	cout << "所有车辆总调度时间: " << total_car_time << endl;
@@ -373,19 +373,39 @@ void floyd() {
 
 	for (auto it = Roads.begin(); it != Roads.end(); it++) {
 		Road* road = it->second;
-		if (road->isCrowded(Crosses[road->from])) {
-			G[road->from][road->to] = MAX_ROAD_LENGTH;
-		}
-		else {
-			G[road->from][road->to] = road->length;
-		}
 
-		if (road->isDuplex == 0 || road->isCrowded(Crosses[road->to])) {
-			G[road->to][road->from] = MAX_ROAD_LENGTH;
-		}
-		else {
-			G[road->to][road->from] = road->length;
-		}
+		// 先不考虑加权
+		// long double num = 0;
+		// for (int i = 0; i < road->channel; i++) {
+		// 	if (!road->roadMap[i].carsOnLane.empty()) {
+		// 		Lane* lane = &road->roadMap[i];
+		// 		for (auto it = lane->carsOnLane.begin(); it != lane->carsOnLane.end(); it++) {
+		// 			Car* car = *it;
+		// 			num += car->status.location*car->status.location;
+		// 			// num += pow(car->status.location, 1.2);
+		// 		}
+		// 	}
+		// }
+		// assert(num >= 0);
+		// road->length_weight[0] = num + 1;
+		// if (road->isDuplex) {
+		// 	for (int i = road->channel, num = 0; i < 2 * road->channel; i++) {
+		// 		if (!road->roadMap[i].carsOnLane.empty()) {
+		// 			Lane* lane = &road->roadMap[i];
+		// 			for (auto it = lane->carsOnLane.begin(); it != lane->carsOnLane.end(); it++) {
+		// 				Car* car = *it;
+		// 				num += car->status.location*car->status.location;
+		// 				// num += pow(car->status.location, 1.2);
+		// 			}
+		// 		}
+		// 	}
+		// 	assert(num >= 0);
+		// 	road->length_weight[1] = num + 1;
+		// }
+
+
+		G[road->from][road->to] = road->length * road->length_weight[0];
+		G[road->to][road->from] = road->isDuplex == 1 ? road->length * road->length_weight[1] : MAX_ROAD_LENGTH;
 	}
 
 	// Floyd算法
