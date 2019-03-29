@@ -523,10 +523,10 @@ void refreshCarsReady() {
 		}
 	}
 	// 对所有已准备好出发的车辆按照最大速度进行排序
-	// CarsReady.sort(compCarSpeed);
+	CarsReady.sort(compCarSpeed);
 	
 	// 对所有已准备好出发的车辆按照id排序
-	CarsReady.sort(compCarId);
+	// CarsReady.sort(compCarId);
 }
 
 void floyd() {

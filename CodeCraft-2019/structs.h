@@ -61,11 +61,11 @@ struct Road {
 
 	Road(int id, int length, int speed, int channel, int from, int to, int isDuplex);
     // 获取进入当前道路时，当前道路内的可行驶距离
-    int2 getFrontStatus(int fromCrossId);
-    int2 getFreeLength(int fromCrossId);
-    bool isCrowded(int cross_id);
-    bool isEmpty(int cross_id);
-    Car* getFirstWaitingCar(int cross_id);
+    int2 getFrontStatus(int from_cross_id);
+    int2 getFreeLength(int from_cross_id);
+    bool isCrowded(int from_cross_id);
+    bool isEmpty(int from_cross_id);
+    bool isFirstLaneEmpty(int from_cross_id);
     bool isPositiveDirection(int from_cross_id);
 };
 

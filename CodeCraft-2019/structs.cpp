@@ -13,8 +13,29 @@ Car::Car(int id, int from, int to, int speed, int planTime) {
 }
 
 bool Car::ready() {
-    if ((planTime + (int)((id-10000)*0.09)) > currentTime) return false;
-    else return true;
+    Road* road = Roads[nextRoad[from][to]];
+    int road_speed = speed > road->speed ? road->speed : speed;
+    int index = road->isPositiveDirection(from) ? 0 : road->channel;
+
+    static int time = 0, startedCars = 0;
+    if (time < currentTime) {
+        time = currentTime;
+        // printf("%d\n", startedCars);
+        startedCars = 0;
+    }
+
+    if (startedCars >= 15) return false;
+    int2 tmp = road->getFreeLength(from);
+    if (tmp.x != index || tmp.y < road_speed) return false;
+    
+
+    // if (startedCars * log(currentTime) > 61) return false;
+    // return road->isEmpty(from);
+    // return !road->isCrowded(from);
+    // if ((planTime + (int)((id-10000)*0.09)) > currentTime) return false;
+
+    startedCars++;
+    return true;
 }
 
 bool Car::start() {
@@ -104,14 +125,8 @@ Road::Road(int id, int length, int speed, int channel, int from, int to, int isD
 // {-1, 0}: 被阻塞在路口
 // {index, length}: {下条车道编号， 下条道路可行驶距离}
 // {-10000+index, length}: 下条车道前方车辆处于等待状态
-int2 Road::getFrontStatus(int fromCrossId) {
-    int index = -1;
-    if (fromCrossId == from) {
-        index = 0;
-    }
-    else if (fromCrossId == to && isDuplex == 1) {
-        index = channel;
-    }
+int2 Road::getFrontStatus(int from_cross_id) {
+    int index = isPositiveDirection(from_cross_id) ? 0 : channel;
 
     int i, j;
     for (i = index; i < index + channel; i++) {
@@ -133,14 +148,8 @@ int2 Road::getFrontStatus(int fromCrossId) {
     return {-1, 0};
 }
 
-int2 Road::getFreeLength(int fromCrossId) {
-    int index = -1;
-    if (fromCrossId == from) {
-        index = 0;
-    }
-    else if (fromCrossId == to && isDuplex == 1) {
-        index = channel;
-    }
+int2 Road::getFreeLength(int from_cross_id) {
+    int index = isPositiveDirection(from_cross_id) ? 0 : channel;
 
     int i, j;
     for (i = index; i < index + channel; i++) {
@@ -153,6 +162,41 @@ int2 Road::getFreeLength(int fromCrossId) {
         return {i, length};
     }
     return {-1, 0};
+}
+
+// 当前方向所有车道均有车即为拥挤
+bool Road::isCrowded(int from_cross_id) {
+    int index = isPositiveDirection(from_cross_id) ? 0 : channel;
+
+    int channel_not_empty = 0;
+    for (int i = index; i < index + channel; i++) {
+        for (int j = length - 1; j >= 0; j--) {
+            if (roadMap[i][j] != nullptr) {
+                channel_not_empty++;
+                break;
+            }
+        }
+    }
+    return channel_not_empty == channel;
+}
+
+bool Road::isEmpty(int from_cross_id) {
+    int index = isPositiveDirection(from_cross_id) ? 0 : channel;
+
+    for (int i = index; i < index + channel; i++) {
+        for (int j = length - 1; j >= 0; j--) {
+            if (roadMap[i][j] != nullptr) return false;
+        }
+    }
+    return true;
+}
+
+bool Road::isFirstLaneEmpty(int cross_id) {
+    int index = isPositiveDirection(cross_id) ? 0 : channel;
+    for (int j = length - 1; j >= 0; j--) {
+        if (roadMap[index][j] != nullptr) return false;
+    }
+    return true;
 }
 
 bool Road::isPositiveDirection(int from_cross_id) {
