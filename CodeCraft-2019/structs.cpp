@@ -99,12 +99,6 @@ int2 Car::reachCross(Cross* cross) {
     int V1 = R1 > V ? V : R1;
     int V2 = R1 > V ? V : R2;
     int S1 = Roads[status.roadID]->length - status.location;
-    // int S2 = tmp.y;
-    // if (S1 >= V1) return {-2, 0};
-    // // if (S2 >= V2) S2 = V2;  // 似乎与下一条规则重复
-    // if (S2 >= (V2 - S1)) S2 = V2 - S1;
-    // if (S1 >= V2) return {-1, 0};
-
     int S2 = V2 - S1 > 0 ? V2 - S1 : 0;
     if (S1 >= V2 || S2 == 0) return {-1, 0};
     if (tmp.x < -1000) {
@@ -113,17 +107,6 @@ int2 Car::reachCross(Cross* cross) {
     }
     return {tmp.x, S2 < tmp.y ? S2 : tmp.y};
 }
-
-// void Car::goThrough(int2 lane_length) {
-//     answer.stopTime = currentTime;
-//     Roads[status.roadID]->roadMap[status.channelNum][status.location - 1] = nullptr;
-//     Roads[status.nextRoadID]->roadMap[lane_length.x][lane_length.y - 1] = this;
-//     status.roadID = status.nextRoadID;
-//     status.channelNum = lane_length.x;
-//     // assert(lane_length.y > 0);
-//     status.location = lane_length.y;
-//     answer.route.push_back(status.roadID);
-// }
 
 // Road
 Road::Road(int id, int length, int speed, int channel, int from, int to, int isDuplex) {
@@ -271,6 +254,16 @@ Cross::Cross(int id, int roadId1, int roadId2, int roadId3, int roadId4) {
     Cross::roadId[1] = roadId2;
     Cross::roadId[2] = roadId3;
     Cross::roadId[3] = roadId4;
+
+    int roadIdRanked[4];
+    for (int i = 0; i < 4; i++) {
+        roadIdRanked[i] = roadId[i];
+    }
+    sort(roadIdRanked, roadIdRanked + 4);
+    for (int i = 0; i < 4; i++) {
+        int tmp = (int)(find(roadIdRanked, roadIdRanked + 4, roadId[i]) - roadIdRanked);
+        rankDist[tmp] = i;
+    }
 
     // 初始化 total_roads
     for (int i = 0; i < 4; i++) {

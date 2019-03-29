@@ -32,7 +32,6 @@ void output(string answerPath);
 void floyd();
 vector<int> getRouteFloyd(int, int);
 int getNextRoadFloyd(int, int);
-int dispatchFirstCar(Cross*, Road*, Lane*);
 void dispatchFollowingCars(Cross*, Road*, int);
 void fake_process();
 void refreshCarsReady();
@@ -67,8 +66,8 @@ int main(int argc, char *argv[])
 	preprocess();
 
 	// process
-	// fake_process();
-	process();
+	fake_process();
+	// process();
 	// write output file
 	output(answerPath);
 
@@ -187,7 +186,7 @@ void process() {
 	// 对所有车辆按照准备出发时间进行排序
 	// CarsNotReady.sort(compCarPlantime);
 	// 开始进行系统调度
-	for (currentTime = 1; finished_cars < Cars.size(); currentTime++) {
+	for (currentTime = 0; finished_cars < Cars.size(); currentTime++) {
 		#ifdef DEBUG
 		cout << "currentTime: " << currentTime << endl;;
 		vector<int2> status;
@@ -252,7 +251,6 @@ void dispatchCarsOnRoad() {
 						// b) 不能出路口
 						else {
 							car->status.isWaiting = false;
-							// car->answer.stopTime++;
 							car->status.location += speed;
 							roadMap[i][j] = nullptr;
 							assert(roadMap[i][j+speed] == nullptr);
@@ -273,7 +271,6 @@ void dispatchCarsOnRoad() {
 						else {
 							int s = k - j - 1 < speed ? k - j - 1 : speed;  // 可行驶的距离
 							car->status.isWaiting = false;
-							// car->answer.stopTime++;
 							car->status.location += s;
 							roadMap[i][j] = nullptr;
 							assert(roadMap[i][j+s] == nullptr);
@@ -292,9 +289,9 @@ void dispatchCarsOnRoad() {
 	for (int i = 1, dispatched_crosses = 0; dispatched_crosses < num_crosses; i %= num_crosses, i++) {
 		Cross* cross = Crosses[i];
 		if (cross->dispatched_times == currentTime) continue;  // 这里性能有提升空间
+		Road* road;
 		for (int j = 0; j < 4; j++) {
-			Road* road = cross->getRoad(j);  //  记得改成按id顺序访问
-			if (road == nullptr) continue;  // 道路不存在
+			if (cross->rankDist[j] == -1 || (road = cross->getRoad(cross->rankDist[j])) == nullptr) continue;  // 道路不存在
 			if (road->from == cross->id && road->isDuplex == 0) continue;  // 单行道，无法进入路口
 
 			// 如果进入该路口的所有道路调度完毕，则该路口调度完毕
@@ -334,7 +331,6 @@ bool dispatch(Cross* cross, Road* road) {
 	if (car->status.location + speed <= road->length) {
 		// 到不了路口，继续向前行驶
 		car->status.isWaiting = false;
-		// car->answer.stopTime++;
 		car->status.location += speed;
 		road->roadMap[car->status.channelNum][car->status.location - 1 - speed] = nullptr;
 		assert(road->roadMap[car->status.channelNum][car->status.location - 1] == nullptr);
@@ -378,7 +374,6 @@ bool dispatch(Cross* cross, Road* road) {
 				assert(tmp.y > 0);
 				car->status.isWaiting = false;
 				road->carsWaitingForDispatched[road_direction ? 0 : 1].pop_front();
-				// car->answer.stopTime = currentTime;
 				road->roadMap[car->status.channelNum][car->status.location - 1] = nullptr;
 				assert(Roads[car->status.nextRoadID]->roadMap[tmp.x][tmp.y - 1] == nullptr);
 				Roads[car->status.nextRoadID]->roadMap[tmp.x][tmp.y - 1] = car;
@@ -540,7 +535,7 @@ void refreshCarsReady() {
 	// CarsReady.sort(compCarSpeed);
 	
 	// 对所有已准备好出发的车辆按照id排序
-	// CarsReady.sort(compCarId);
+	CarsReady.sort(compCarId);
 }
 
 void floyd() {
@@ -559,39 +554,41 @@ void floyd() {
 
 	for (auto it = Roads.begin(); it != Roads.end(); it++) {
 		Road* road = it->second;
+		G[road->from][road->to] = road->length;
+		G[road->to][road->from] = road->isDuplex == 1 ? road->length : MAX_ROAD_LENGTH;
 
-		// 先不考虑加权
-		// long double num = 0;
-		// for (int i = 0; i < road->channel; i++) {
-		// 	if (!road->roadMap[i].carsOnLane.empty()) {
-		// 		Lane* lane = &road->roadMap[i];
-		// 		for (auto it = lane->carsOnLane.begin(); it != lane->carsOnLane.end(); it++) {
-		// 			Car* car = *it;
-		// 			num += car->status.location*car->status.location;
-		// 			// num += pow(car->status.location, 1.2);
-		// 		}
-		// 	}
-		// }
-		// assert(num >= 0);
-		// road->length_weight[0] = num + 1;
-		// if (road->isDuplex) {
-		// 	for (int i = road->channel, num = 0; i < 2 * road->channel; i++) {
-		// 		if (!road->roadMap[i].carsOnLane.empty()) {
-		// 			Lane* lane = &road->roadMap[i];
-		// 			for (auto it = lane->carsOnLane.begin(); it != lane->carsOnLane.end(); it++) {
-		// 				Car* car = *it;
-		// 				num += car->status.location*car->status.location;
-		// 				// num += pow(car->status.location, 1.2);
-		// 			}
-		// 		}
-		// 	}
-		// 	assert(num >= 0);
-		// 	road->length_weight[1] = num + 1;
-		// }
+	// 先不考虑加权
+	// 	long double num = 0;
+	// 	for (int i = 0; i < road->channel; i++) {
+	// 		if (!road->roadMap[i].carsOnLane.empty()) {
+	// 			Lane* lane = &road->roadMap[i];
+	// 			for (auto it = lane->carsOnLane.begin(); it != lane->carsOnLane.end(); it++) {
+	// 				Car* car = *it;
+	// 				num += car->status.location*car->status.location;
+	// 				// num += pow(car->status.location, 1.2);
+	// 			}
+	// 		}
+	// 	}
+	// 	assert(num >= 0);
+	// 	road->length_weight[0] = num + 1;
+	// 	if (road->isDuplex) {
+	// 		for (int i = road->channel, num = 0; i < 2 * road->channel; i++) {
+	// 			if (!road->roadMap[i].carsOnLane.empty()) {
+	// 				Lane* lane = &road->roadMap[i];
+	// 				for (auto it = lane->carsOnLane.begin(); it != lane->carsOnLane.end(); it++) {
+	// 					Car* car = *it;
+	// 					num += car->status.location*car->status.location;
+	// 					// num += pow(car->status.location, 1.2);
+	// 				}
+	// 			}
+	// 		}
+	// 		assert(num >= 0);
+	// 		road->length_weight[1] = num + 1;
+	// 	}
 
 
-		G[road->from][road->to] = road->length * road->length_weight[0];
-		G[road->to][road->from] = road->isDuplex == 1 ? road->length * road->length_weight[1] : MAX_ROAD_LENGTH;
+		// G[road->from][road->to] = road->length * road->length_weight[0];
+		// G[road->to][road->from] = road->isDuplex == 1 ? road->length * road->length_weight[1] : MAX_ROAD_LENGTH;
 	}
 
 	// Floyd算法
@@ -683,7 +680,7 @@ void fake_process() {
 	floyd();
 	for (auto it = Cars.begin(); it != Cars.end(); it++) {
 		Car* car = it->second;
-		car->answer.startTime = car->planTime + (int)((car->id-10000)*1);
+		car->answer.startTime = car->planTime + (int)((car->id-10000)*0.05);
 		car->answer.route = getRouteFloyd(car->from, car->to);
 	}
 }

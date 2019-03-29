@@ -21,7 +21,7 @@ typedef struct {int x, y;} int2;
 
 // Car和Road里的声明调用了Cross, 因此必须前置声明Cross
 struct Car;
-struct Lane;
+// struct Lane;
 struct Road;
 struct Cross;
 
@@ -48,18 +48,17 @@ struct Car {
     bool start();
     void finish();
     int2 reachCross(Cross* cross);
-    void goThrough(int2 channel_length);
 
 };
 
-struct Lane{
-    // #ifdef DEBUG
-    // int road_id, channel_index;  // 调试用
-    // #endif
-    // int dispatchedTimes = 0;
-    list<Car*> carsOnLane;
-    // vector<Car*> carsOnLane;
-};
+// struct Lane{
+//     // #ifdef DEBUG
+//     // int road_id, channel_index;  // 调试用
+//     // #endif
+//     // int dispatchedTimes = 0;
+//     list<Car*> carsOnLane;
+//     // vector<Car*> carsOnLane;
+// };
 
 struct Road {
 	int id, length, speed, channel, from, to, isDuplex;
@@ -70,10 +69,10 @@ struct Road {
 
     list<Car*> carsWaitingForDispatched[2];
 
-    int dispatched_times[2] = {0, 0};
+    int dispatched_times[2] = {-1, -1};
 
     // 权重，用来衡量拥挤程度
-    double length_weight[2] = {1, 1};
+    // double length_weight[2] = {1, 1};
 
 	Road(int id, int length, int speed, int channel, int from, int to, int isDuplex);
     // 获取进入当前道路时，当前道路内的可行驶距离
@@ -87,14 +86,12 @@ struct Road {
 
 struct Cross {
 	int id, roadId[4];
-    // // 能够进入该路口的车道数量
-    // int dispatched_channels = 0, total_channels = 0;
-    // int dispatched_cars = 0, total_cars = 0;
+    // 对道路按id排序后存储
+    int rankDist[4] = {-1, -1, -1, -1};
+    // 能够进入该路口的道路数量
     int dispatched_roads = 0, total_roads = 0;
     // 该路口被调度的次数，用来判断当前时间片该路口是否完成调度
-    int dispatched_times = 0;
-    // 对每一条路，按进入这条路的先后顺序列出另外几条路的车道，用队列指针表示车道
-    vector<Lane*> channelsToRoad[4];
+    int dispatched_times = -1;
 
 	Cross(int id, int roadId1, int roadId2, int roadId3, int roadId4);
     Road* getRoad(int num);
