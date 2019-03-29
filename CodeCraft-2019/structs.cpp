@@ -24,7 +24,21 @@ bool Car::ready() {
         startedCars = 0;
     }
 
-    if (startedCars >= 15) return false;
+    if (currentTime <= 10 && speed < 6) return false;
+
+    switch (currentTime) {
+        case 1: if (startedCars >= 90) return false; break;
+        case 2: if (startedCars >= 90) return false; break;
+        case 3: if (startedCars >= 80) return false; break;
+        case 4: if (startedCars >= 55) return false; break;
+        case 5: if (startedCars >= 50) return false; break;
+        case 6: if (startedCars >= 40) return false; break;
+        case 7: if (startedCars >= 40) return false; break;
+        case 8: if (startedCars >= 35) return false; break;
+        case 9: if (startedCars >= 30) return false; break;
+        case 10: if (startedCars >= 30) return false; break;
+        default: if (startedCars >= 20) return false; break;
+    }
     int2 tmp = road->getFreeLength(from);
     if (tmp.x != index || tmp.y < road_speed) return false;
     
