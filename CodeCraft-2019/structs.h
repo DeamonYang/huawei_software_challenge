@@ -35,6 +35,7 @@ struct Car {
         int roadID, nextRoadID;
         // location: 1...length
         int channelNum, location;
+        bool isWaiting = false;
     } status;
     // 车辆出发时间及行驶路径
     struct {
@@ -52,38 +53,54 @@ struct Car {
 };
 
 struct Lane{
-    #ifdef DEBUG
-    int road_id, channel_index;  // 调试用
-    #endif
-    int dispatchedTimes = 0;
+    // #ifdef DEBUG
+    // int road_id, channel_index;  // 调试用
+    // #endif
+    // int dispatchedTimes = 0;
     list<Car*> carsOnLane;
+    // vector<Car*> carsOnLane;
 };
 
 struct Road {
 	int id, length, speed, channel, from, to, isDuplex;
     // 储存路上汽车情况，每个队列表示一个车道
     // 队列顺序: 先正方向后反方向，每个方向都按车道号由小向大排
-    vector<Lane> roadMap;
+    // vector<vector<Car*>> roadMap;
+    Car ***roadMap;
+
+    list<Car*> carsWaitingForDispatched[2];
+
+    int dispatched_times[2] = {0, 0};
 
     // 权重，用来衡量拥挤程度
     double length_weight[2] = {1, 1};
 
 	Road(int id, int length, int speed, int channel, int from, int to, int isDuplex);
     // 获取进入当前道路时，当前道路内的可行驶距离
+    int2 getFrontStatus(int fromCrossId);
     int2 getFreeLength(int fromCrossId);
     bool isCrowded(int cross_id);
     bool isEmpty(int cross_id);
+    Car* getFirstWaitingCar(int cross_id);
+    bool isPositiveDirection(int from_cross_id);
 };
 
 struct Cross {
 	int id, roadId[4];
-    // 能够进入该路口的车道数量
-    int total_channels = 0;
+    // // 能够进入该路口的车道数量
+    // int dispatched_channels = 0, total_channels = 0;
+    // int dispatched_cars = 0, total_cars = 0;
+    int dispatched_roads = 0, total_roads = 0;
+    // 该路口被调度的次数，用来判断当前时间片该路口是否完成调度
+    int dispatched_times = 0;
     // 对每一条路，按进入这条路的先后顺序列出另外几条路的车道，用队列指针表示车道
     vector<Lane*> channelsToRoad[4];
 
 	Cross(int id, int roadId1, int roadId2, int roadId3, int roadId4);
     Road* getRoad(int num);
+    int getFrontRoad(Road* road);
+    int getLeftRoad(Road* road);
+    int getRightRoad(Road* road);
 };
 
 // 系统调度时间

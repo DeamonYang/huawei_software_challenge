@@ -32,10 +32,13 @@ void output(string answerPath);
 void floyd();
 vector<int> getRouteFloyd(int, int);
 int getNextRoadFloyd(int, int);
-bool dispatchFirstCar(Cross*, Road*, Lane*);
-void dispatchFollowingCars(Lane*);
+int dispatchFirstCar(Cross*, Road*, Lane*);
+void dispatchFollowingCars(Cross*, Road*, int);
 void fake_process();
 void refreshCarsReady();
+bool conflict(Cross*, Road*, Car* car);
+bool dispatch(Cross*, Road*);
+bool dispatch_car(Cross*, Road*, Car* car);
 
 int main(int argc, char *argv[])
 {
@@ -177,6 +180,7 @@ void preprocess() {
 		D[i] = new int[num_crosses + 1];
 		nextRoad[i] = new int[num_crosses + 1];
 	}
+	floyd();
 }
 
 void process() {
@@ -194,7 +198,7 @@ void process() {
 		// 更新CarsReady
 		refreshCarsReady();
 		// 更新路径矩阵
-		floyd();
+		// floyd();
 
 		// 对道路上的车进行调度
 		dispatchCarsOnRoad();
@@ -221,36 +225,218 @@ void process() {
 }
 
 void dispatchCarsOnRoad() {
-	for (auto it = Crosses.begin(); it != Crosses.end(); it++) {
-		Cross* cross = it->second;
-		int dispatched_lanes = 0;
-		for (int i = 0; dispatched_lanes < cross->total_channels; ++i %= 4) {
-			Road* road = cross->getRoad(i);
-			if (road == nullptr) continue;  // 道路不存在
-			if (road->to == cross->id && road->isDuplex == 0) continue;  // 单行道，无法进入
+	// 第一步: 遍历各道路，确定所有车辆的行驶状态
+	for (auto it = Roads.begin(); it != Roads.end(); it++) {
+		Road* road = it->second;
+		Car*** roadMap = road->roadMap;
 
-			// 对要经过cross进入road的lane按照交通规则给定的顺序依次访问
-			for (auto it1 = cross->channelsToRoad[i].begin(); it1 != cross->channelsToRoad[i].end(); it1++) {
-				// 如果进入该路口的所有车道调度完毕，则该路口调度完毕
-				if (dispatched_lanes == cross->total_channels) break;
+		for (int j = road->length-1; j >= 0; j--) {
+			for (int i = 0; i < road->channel * (1 + road->isDuplex); i++) {
+				Car* car = roadMap[i][j];
+				if (car == nullptr) continue;
 
-				Lane* lane = *it1;
-				// 如果这条车道已经结束调度，则继续
-				if (lane->dispatchedTimes == currentTime) {
-					continue;
+	if (road->id == 5002 && car->id == 10009) {
+		int a = 0;
+	}
+
+				int speed = road->speed > car->speed ? car->speed : road->speed;
+				for (int k = j + 1; ; k++) {
+					// 该车道前方没有车辆
+					if (k == road->length) {
+						// a) 可以出路口
+						if (j + speed >= road->length) {
+							car->status.isWaiting = true;
+							road->carsWaitingForDispatched[i < road->channel ? 0 : 1].push_back(car);
+							break;
+						}
+						// b) 不能出路口
+						else {
+							car->status.isWaiting = false;
+							// car->answer.stopTime++;
+							car->status.location += speed;
+							roadMap[i][j] = nullptr;
+							assert(roadMap[i][j+speed] == nullptr);
+							roadMap[i][j+speed] = car;
+							break;
+						}
+
+					}
+					// 该车道前方有车辆
+					if (roadMap[i][k] != nullptr) {
+						// c) 被等待状态车辆所阻挡
+						if (roadMap[i][k]->status.isWaiting && (k - j <= speed)) {
+							car->status.isWaiting = true;
+							road->carsWaitingForDispatched[i < road->channel ? 0 : 1].push_back(car);
+							break;
+						}
+						// d) 被终止状态车辆所阻挡或等待状态车辆距离太远，不会造成阻挡
+						else {
+							int s = k - j - 1 < speed ? k - j - 1 : speed;  // 可行驶的距离
+							car->status.isWaiting = false;
+							// car->answer.stopTime++;
+							car->status.location += s;
+							roadMap[i][j] = nullptr;
+							assert(roadMap[i][j+s] == nullptr);
+							roadMap[i][j+s] = car;
+							break;
+						}
+					}
 				}
-				
-				if (dispatchFirstCar(cross, road, lane)) {
-					dispatched_lanes++;
-					lane->dispatchedTimes++;
-				}				
+			}
+		}
+	}
+
+	// 第二步: 遍历各路口，调度等待状态的车辆
+	// 注意: 此处要求Cross的id从1开始依次递增
+	static const int num_crosses = Crosses.size();
+	for (int i = 1, dispatched_crosses = 0; dispatched_crosses < num_crosses; i %= num_crosses, i++) {
+		Cross* cross = Crosses[i];
+		if (cross->dispatched_times == currentTime) continue;  // 这里性能有提升空间
+		for (int j = 0; j < 4; j++) {
+			Road* road = cross->getRoad(j);  //  记得改成按id顺序访问
+			if (road == nullptr) continue;  // 道路不存在
+			if (road->from == cross->id && road->isDuplex == 0) continue;  // 单行道，无法进入路口
+
+			// 如果进入该路口的所有道路调度完毕，则该路口调度完毕
+			if (cross->dispatched_roads == cross->total_roads) {
+				cross->dispatched_times++;
+				cross->dispatched_roads = 0;
+				dispatched_crosses++;
+				break;
+			}
+			
+			// 道路上没有需要调度的车, 则该道路视作调度完成
+			bool road_direction = !road->isPositiveDirection(cross->id);
+			if (road->carsWaitingForDispatched[road_direction ? 0 : 1].empty()) {
+				if (road->dispatched_times[road_direction ? 0 : 1] < currentTime) {
+					road->dispatched_times[road_direction ? 0 : 1] = currentTime;
+					cross->dispatched_roads++;
+				}
+				continue;
+			}
+
+			if (dispatch(cross, road)) {
+				road->dispatched_times[road_direction ? 0 : 1] = currentTime;
+				cross->dispatched_roads++;
 			}
 		}
 	}
 }
 
+
+bool dispatch(Cross* cross, Road* road) {
+	bool road_direction = !road->isPositiveDirection(cross->id);
+	if (road->carsWaitingForDispatched[road_direction ? 0 : 1].empty()) return true;
+	Car* car = road->carsWaitingForDispatched[road_direction ? 0 : 1].front();
+
+	// 先看能否行驶到路口
+	int speed = road->speed > car->speed ? car->speed : road->speed;
+	if (car->status.location + speed <= road->length) {
+		// 到不了路口，继续向前行驶
+		car->status.isWaiting = false;
+		// car->answer.stopTime++;
+		car->status.location += speed;
+		road->roadMap[car->status.channelNum][car->status.location - 1 - speed] = nullptr;
+		assert(road->roadMap[car->status.channelNum][car->status.location - 1] == nullptr);
+		road->roadMap[car->status.channelNum][car->status.location - 1] = car;
+		road->carsWaitingForDispatched[road_direction ? 0 : 1].pop_front();
+		dispatchFollowingCars(cross, road, car->status.channelNum);
+		return dispatch(cross, road);
+	}
+
+	car->status.nextRoadID = nextRoad[cross->id][car->to];
+	if (conflict(cross, road, car)) 
+		return false;
+
+	if (nextRoad[cross->id][car->to] == -1) {
+		car->finish();
+		road->carsWaitingForDispatched[road_direction ? 0 : 1].pop_front();
+		return dispatch(cross, road);
+	}
+	else {
+
+	if (road->id == 5043 && car->id == 10328) {
+		int a = 0;
+	}
+
+		int2 tmp = car->reachCross(cross);
+		assert(tmp.x != -2);
+		switch (tmp.x) {
+			case -1:  // 车辆被阻塞在路口，位置更新至路口处
+				car->status.isWaiting = false;
+				road->carsWaitingForDispatched[road_direction ? 0 : 1].pop_front();
+				// car->answer.stopTime++;
+				road->roadMap[car->status.channelNum][car->status.location - 1] = nullptr;
+				assert(road->roadMap[car->status.channelNum][road->length - 1] == nullptr);
+				road->roadMap[car->status.channelNum][road->length - 1] = car;
+				car->status.location = road->length;
+				dispatchFollowingCars(cross, road, car->status.channelNum);
+				return dispatch(cross, road);
+			case -3:  // 车辆理论上能通过路口，但是前方有处于等待状态的车辆阻挡，等待下次调度
+				return false;
+			default:  // 车辆穿过路口
+				assert(tmp.y > 0);
+				car->status.isWaiting = false;
+				road->carsWaitingForDispatched[road_direction ? 0 : 1].pop_front();
+				// car->answer.stopTime = currentTime;
+				road->roadMap[car->status.channelNum][car->status.location - 1] = nullptr;
+				assert(Roads[car->status.nextRoadID]->roadMap[tmp.x][tmp.y - 1] == nullptr);
+				Roads[car->status.nextRoadID]->roadMap[tmp.x][tmp.y - 1] = car;
+				car->status.roadID = car->status.nextRoadID;
+				car->status.channelNum = tmp.x;
+				car->status.location = tmp.y;
+				car->answer.route.push_back(car->status.roadID);
+				return dispatch(cross, road);
+		}
+	}
+}
+
+bool conflict(Cross* cross, Road* road, Car* car) {
+	if (nextRoad[cross->id][car->to] == -1) return false;  // 前往终点则不会冲突 
+	int front_road_id = cross->getFrontRoad(road);
+	int left_road_id = cross->getLeftRoad(road);
+	int right_road_id = cross->getRightRoad(road);
+	if (car->status.nextRoadID == front_road_id) {
+		return false;
+	}
+	if (car->status.nextRoadID == left_road_id) {
+		if (right_road_id != -1) {
+			Road* right_road = Roads[right_road_id];
+			bool right_road_direction = !right_road->isPositiveDirection(cross->id);
+			if (!right_road->carsWaitingForDispatched[right_road_direction ? 0 : 1].empty()) {
+				if (right_road->carsWaitingForDispatched[right_road_direction ? 0 : 1].front()->status.nextRoadID == left_road_id) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+	if (car->status.nextRoadID == right_road_id) {
+		if (left_road_id != -1) {
+			Road* left_road = Roads[left_road_id];
+			bool left_road_direction = !left_road->isPositiveDirection(cross->id);
+			if (!left_road->carsWaitingForDispatched[left_road_direction ? 0 : 1].empty()) {
+				if (left_road->carsWaitingForDispatched[left_road_direction ? 0 : 1].front()->status.nextRoadID == right_road_id) {
+					return true;
+				}
+			}
+		}
+		if (front_road_id != -1) {
+			Road* front_road = Roads[front_road_id];
+			bool front_road_direction = !front_road->isPositiveDirection(cross->id);
+			if (!front_road->carsWaitingForDispatched[front_road_direction ? 0 : 1].empty()) {
+				if (front_road->carsWaitingForDispatched[front_road_direction ? 0 : 1].front()->status.nextRoadID == right_road_id) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+	assert(0);
+	return true;
+}
+
 void dispatchCarsInGarage() {
-	// 模拟fake_process里面的算法
 	if (CarsReady.size() == 0) return;
 	for (auto it = CarsReady.begin(); it != CarsReady.end(); ) {
 		Car* car = *it;
@@ -342,7 +528,7 @@ int getNextRoadFloyd(int from, int to) {
 void refreshCarsReady() {
 	if (CarsNotReady.size() == 0) return;
 	for (auto it = CarsNotReady.begin(); it != CarsNotReady.end(); ) {
-		if (true) {  //(*it)->planTime <= currentTime) {
+		if ((*it)->planTime <= currentTime) {
 			CarsReady.push_back(*it);
 			it = CarsNotReady.erase(it);
 		}
@@ -443,93 +629,40 @@ void floyd() {
 	}
 }
 
-// return:
-// true:  调度完成
-// false: 调度未完成
-bool dispatchFirstCar(Cross* cross, Road* road, Lane* lane) {
-	// 如果车道为空，则这条车道视作已完成调度
-	if (lane->carsOnLane.size() == 0) {
-		return true;
-	}
-	// 取车道里最靠前的一辆车为研究对象
-	Car* car = lane->carsOnLane.front();
+void dispatchFollowingCars(Cross* cross, Road* currentRoad, int channelNum) {
+	bool road_direction = !currentRoad->isPositiveDirection(cross->id);
+	Car *car, *front_car = nullptr;
+	Car*** roadMap = currentRoad->roadMap;
+	bool flag = false;
+	for (int j = currentRoad->length - 1; j >= 0; j--) {
+		if (roadMap[channelNum][j] == nullptr) continue;
+		if (!flag) {
+			front_car = roadMap[channelNum][j];
+			flag = true;
+			continue;
+		}
+		assert(front_car->status.isWaiting == false);
+		car = roadMap[channelNum][j];
+		if (car->status.isWaiting == false) continue;
 
-	// 这辆车是从上一条路跑来的，相当于原先车道是空的
-	if (car->answer.stopTime == currentTime) {
-		return true;
-	}
-
-	// 讨论这辆车能否到达或是通过前面的路口
-	car->status.nextRoadID = nextRoad[cross->id][car->to];
-	if (car->status.nextRoadID == car->status.roadID) {
-		// 不能掉头，换一条路
-		Road* road;
-		for (int i = 0; i < 4; i++) {
-			if ((road = cross->getRoad(i)) != nullptr && road->id != car->status.nextRoadID) {
-				car->status.nextRoadID = road->id;
+		int speed = currentRoad->speed > car->speed ? car->speed : currentRoad->speed;
+		if (car->status.location + speed >= front_car->status.location) {
+			car->status.location = front_car->status.location - 1;
+		}
+		else {
+			car->status.location += speed;
+		}
+		car->status.isWaiting = false;
+		list<Car*>* l = &currentRoad->carsWaitingForDispatched[road_direction ? 0 : 1];
+		for (auto it = l->begin(); it != l->end(); it++) {
+			if ((*it)->id == car->id) {
+				l->erase(it);
 				break;
 			}
 		}
-	}
-	// assert(car->status.nextRoadID != car->status.roadID);
-	
-	// 如果没有下一条路，即前方路口是终点
-	if (car->status.nextRoadID == -1) {
-		Road* currentRoad = Roads[car->status.roadID];
-		int speed = currentRoad->speed > car->speed ? car->speed : currentRoad->speed;
-		car->status.location += speed;
-		if (car->status.location > currentRoad->length) {
-			car->finish();
-			return false;
-		}
-		else {
-			dispatchFollowingCars(lane);
-			return true;
-		}
-	}
-	// 如果当前道路不是规划的下一条道路
-	if (car->status.nextRoadID != road->id) {
-		return false;
-	}
-	// 当前道路是一条正常的路
-	int2 tmp = car->reachCross(cross);
-	switch (tmp.x) {
-		case -2:  // 车辆无法到达下一个路口，向前行驶一定距离
-			car->status.location += road->speed > car->speed ? car->speed : road->speed; 
-			car->answer.stopTime = currentTime;
-			dispatchFollowingCars(lane);
-			return true;
-		case -1:  // 车辆被阻塞在路口，位置更新至路口处
-			car->status.location = Roads[car->status.roadID]->length;
-			car->answer.stopTime = currentTime;
-			dispatchFollowingCars(lane);
-			return true;
-		default:  // 车辆穿过路口
-			car->goThrough(tmp);
-			return false;
-	}
-}
-
-void dispatchFollowingCars(Lane* lane) {
-	Road* currentRoad = nullptr;
-	Car *car, *front_car = nullptr;
-	for (auto it = lane->carsOnLane.begin(); it != lane->carsOnLane.end(); it++) {
-		if (it == lane->carsOnLane.begin()) {
-			front_car = *it;
-			currentRoad = Roads[front_car->status.roadID];
-			continue;  // 不再调控第一辆车
-		}
-		car = *it;
-		if (car->answer.stopTime == currentTime) {  // 这辆车以及以后的车是从别的路跑来的
-			return;
-		}
-		int speed = currentRoad->speed > car->speed ? car->speed : currentRoad->speed;
-		car->status.location += speed;
-		if (car->status.location >= front_car->status.location) {
-			car->status.location = front_car->status.location - 1;
-		}
-		car->answer.stopTime++;
-		// assert(car->status.location > 0);
+		currentRoad->roadMap[channelNum][j] = nullptr;
+		assert(currentRoad->roadMap[channelNum][car->status.location - 1] == nullptr);
+		currentRoad->roadMap[channelNum][car->status.location - 1] = car;
 		front_car = car;
 	}
 }
@@ -550,7 +683,7 @@ void fake_process() {
 	floyd();
 	for (auto it = Cars.begin(); it != Cars.end(); it++) {
 		Car* car = it->second;
-		car->answer.startTime = car->planTime + (int)((car->id-10000)*0.09);
+		car->answer.startTime = car->planTime + (int)((car->id-10000)*1);
 		car->answer.route = getRouteFloyd(car->from, car->to);
 	}
 }
