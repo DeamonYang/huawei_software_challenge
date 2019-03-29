@@ -10,10 +10,8 @@
 #include <list>
 #include <cmath>
 
-// #ifdef DEBUG
 #include <assert.h>
 #include <time.h>
-// #endif
 
 using namespace std;
 
@@ -21,7 +19,6 @@ typedef struct {int x, y;} int2;
 
 // Car和Road里的声明调用了Cross, 因此必须前置声明Cross
 struct Car;
-// struct Lane;
 struct Road;
 struct Cross;
 
@@ -51,15 +48,6 @@ struct Car {
 
 };
 
-// struct Lane{
-//     // #ifdef DEBUG
-//     // int road_id, channel_index;  // 调试用
-//     // #endif
-//     // int dispatchedTimes = 0;
-//     list<Car*> carsOnLane;
-//     // vector<Car*> carsOnLane;
-// };
-
 struct Road {
 	int id, length, speed, channel, from, to, isDuplex;
     // 储存路上汽车情况，每个队列表示一个车道
@@ -70,9 +58,6 @@ struct Road {
     list<Car*> carsWaitingForDispatched[2];
 
     int dispatched_times[2] = {-1, -1};
-
-    // 权重，用来衡量拥挤程度
-    // double length_weight[2] = {1, 1};
 
 	Road(int id, int length, int speed, int channel, int from, int to, int isDuplex);
     // 获取进入当前道路时，当前道路内的可行驶距离

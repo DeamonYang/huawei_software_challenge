@@ -66,8 +66,8 @@ int main(int argc, char *argv[])
 	preprocess();
 
 	// process
-	fake_process();
-	// process();
+	// fake_process();
+	process();
 	// write output file
 	output(answerPath);
 
@@ -234,10 +234,6 @@ void dispatchCarsOnRoad() {
 				Car* car = roadMap[i][j];
 				if (car == nullptr) continue;
 
-	if (road->id == 5002 && car->id == 10009) {
-		int a = 0;
-	}
-
 				int speed = road->speed > car->speed ? car->speed : road->speed;
 				for (int k = j + 1; ; k++) {
 					// 该车道前方没有车辆
@@ -350,11 +346,6 @@ bool dispatch(Cross* cross, Road* road) {
 		return dispatch(cross, road);
 	}
 	else {
-
-	if (road->id == 5043 && car->id == 10328) {
-		int a = 0;
-	}
-
 		int2 tmp = car->reachCross(cross);
 		assert(tmp.x != -2);
 		switch (tmp.x) {
