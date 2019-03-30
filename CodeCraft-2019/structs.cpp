@@ -13,9 +13,9 @@ Car::Car(int id, int from, int to, int speed, int planTime) {
 }
 
 bool Car::ready() {
-    Road* road = Roads[nextRoad[from][to]];
-    int road_speed = speed > road->speed ? road->speed : speed;
-    int index = road->isPositiveDirection(from) ? 0 : road->channel;
+    // Road* road = Roads[nextRoad[from][to]];
+    // int road_speed = speed > road->speed ? road->speed : speed;
+    // int index = road->isPositiveDirection(from) ? 0 : road->channel;
 
     static int time = 0, startedCars = 0;
     if (time < currentTime) {
@@ -24,29 +24,62 @@ bool Car::ready() {
         startedCars = 0;
     }
 
-    if (currentTime <= 10 && speed < 6) return false;
+    // if (currentTime <= 100 && speed < 6) return false;
+    // if (currentTime <= 200 && speed < 4) return false;
+    // if (currentTime <= 60 && speed < 3) return false;
+    // if (currentTime <= 100 && speed < 2) return false;
+    if (currentTime <= 10) {
+        if (startedCars >= 200/currentTime) {
+            return false;
+        }
+    }
+    else {
+        if (startedCars >= 19) {
+            return false;
+        }
+    }
 
     switch (currentTime) {
-        case 1: if (startedCars >= 90) return false; break;
-        case 2: if (startedCars >= 90) return false; break;
-        case 3: if (startedCars >= 80) return false; break;
-        case 4: if (startedCars >= 55) return false; break;
-        case 5: if (startedCars >= 50) return false; break;
-        case 6: if (startedCars >= 40) return false; break;
-        case 7: if (startedCars >= 40) return false; break;
-        case 8: if (startedCars >= 35) return false; break;
-        case 9: if (startedCars >= 30) return false; break;
-        case 10: if (startedCars >= 30) return false; break;
-        default: if (startedCars >= 20) return false; break;
+        // case 1: // if (startedCars >= 100) return false; break;
+        // case 2: // if (startedCars >= 90) return false; break;
+        // case 3: // if (startedCars >= 90) return false; break;
+        // case 4: // if (startedCars >= 90) return false; break;
+        // case 5: // if (startedCars >= 70) return false; break;
+        // case 6: // if (startedCars >= 70) return false; break;
+        // case 7: // if (startedCars >= 70) return false; break;
+        // case 8: // if (startedCars >= 70) return false; break;
+        // case 9: // if (startedCars >= 70) return false; break;
+        // case 10: if (startedCars >= 200) return false; break;
+        // case 11: // if (startedCars >= 100) return false; break;
+        // case 12: // if (startedCars >= 90) return false; break;
+        // case 13: // if (startedCars >= 90) return false; break;
+        // case 14: // if (startedCars >= 90) return false; break;
+        // case 15: // if (startedCars >= 70) return false; break;
+        // case 16: // if (startedCars >= 70) return false; break;
+        // case 17: // if (startedCars >= 70) return false; break;
+        // case 18: // if (startedCars >= 70) return false; break;
+        // case 19: // if (startedCars >= 70) return false; break;
+        // case 20: if (startedCars >= 100) return false; break;
+    //     case 11: if (startedCars >= 50) return false; break;
+    //     case 12: if (startedCars >= 50) return false; break;
+    //     case 13: if (startedCars >= 50) return false; break;
+    //     case 14: if (startedCars >= 50) return false; break;
+    //     case 15: if (startedCars >= 50) return false; break;
+    //     case 16: if (startedCars >= 30) return false; break;
+    //     case 17: if (startedCars >= 30) return false; break;
+    //     case 18: if (startedCars >= 30) return false; break;
+    //     case 19: if (startedCars >= 30) return false; break;
+    //     case 20: if (startedCars >= 30) return false; break;
+        // default: if (startedCars >= 240/currentTime > 15 ? 240/currentTime : 15) return false; break;
     }
-    int2 tmp = road->getFreeLength(from);
-    if (tmp.x != index || tmp.y < road_speed) return false;
+    // int2 tmp = road->getFreeLength(from);
+    // if (tmp.x != index || tmp.y < road_speed) return false;
     
 
     // if (startedCars * log(currentTime) > 61) return false;
     // return road->isEmpty(from);
     // return !road->isCrowded(from);
-    // if ((planTime + (int)((id-10000)*0.09)) > currentTime) return false;
+    // if ((planTime + (int)((id-10000)*0.07)) > currentTime) return false;
 
     startedCars++;
     return true;
