@@ -24,17 +24,18 @@ bool Car::ready() {
         startedCars = 0;
     }
 
-    if (CarsRunning.size() >= 1500) return false;
+    if (currentTime <= 1000) { if (CarsRunning.size() >= 8000) return false; }
+    // else if (currentTime <= 2000) { if (CarsRunning.size() >= 8000) return false; }
 
     if (currentTime <= 10) { if (speed < 14) return false; }
     else if (currentTime <= 300) { if (speed < 10) return false; }
-    else if (currentTime <= 1000) { if (speed < 6) return false; }
+    else if (currentTime <= 500) { if (speed < 6) return false; }
 
-    if (currentTime <= 10) { if (startedCars >= 800/currentTime) return false; }
-    else if (currentTime <= 100) { if (startedCars >= 70) return false; }
-    else if (currentTime <= 500) { if (startedCars >= 60) return false; }
-    else if (currentTime <= 1000) { if (startedCars >= 35) return false; }
-    else { if (startedCars >= 35) return false; }
+    // if (currentTime <= 10) { if (startedCars >= 800/currentTime) return false; }
+    // else if (currentTime <= 100) { if (startedCars >= 70) return false; }
+    // else if (currentTime <= 500) { if (startedCars >= 60) return false; }
+    // else if (currentTime <= 1000) { if (startedCars >= 40) return false; }
+    // else { if (startedCars >= 35) return false; }
 
     // int2 tmp = road->getFreeLength(from);
     // if (tmp.x > 0 && tmp.y < road_speed) return false;

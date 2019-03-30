@@ -24,6 +24,10 @@ struct Cross;
 
 struct Car {
 	int id, from, to, speed, planTime;
+    struct {
+        int waitingTime = 0;
+        vector<int> crowded_roads;
+    } deadlock;
     // 车辆状态
     struct {
         // 对roadId 与 nextRoadId:
@@ -57,6 +61,8 @@ struct Road {
 
     list<Car*> carsWaitingForDispatched[2];
 
+    int length_weight[2] = {1, 1};
+
     int dispatched_times[2] = {-1, -1};
 
 	Road(int id, int length, int speed, int channel, int from, int to, int isDuplex);
@@ -74,7 +80,7 @@ struct Cross {
     // 对道路按id排序后存储
     int rankDist[4] = {-1, -1, -1, -1};
     // 能够进入该路口的道路数量
-    int dispatched_roads = 0, total_roads = 0;
+    int dispatched_roads = 0, total_roads_from = 0, total_roads_to = 0;
     // 该路口被调度的次数，用来判断当前时间片该路口是否完成调度
     int dispatched_times = -1;
 

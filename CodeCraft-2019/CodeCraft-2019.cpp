@@ -37,8 +37,7 @@ void dispatchFollowingCars(Cross*, Road*, int);
 void fake_process();
 void refreshCarsReady();
 bool conflict(Cross*, Road*, Car* car);
-bool dispatch(Cross*, Road*);
-bool dispatch_car(Cross*, Road*, Car* car);
+bool dispatch(Cross*, Road*, bool isRedispatch = false);
 
 int main(int argc, char *argv[])
 {
@@ -71,6 +70,13 @@ int main(int argc, char *argv[])
 	process();
 	// write output file
 	output(answerPath);
+
+	// int capacity = 0;
+	// for (auto it = Roads.begin(); it != Roads.end(); it++) {
+	// 	Road* road = it->second;
+	// 	capacity += road->channel*(1+road->isDuplex)*road->length;
+	// }
+	// cout << "total_capacity: " << capacity << endl;
 
 	// print information
 	// #ifdef DEBUG
@@ -179,12 +185,19 @@ void preprocess() {
 		car->to = crossId2Num[car->to];
 	}
 	for (auto it = Crosses.begin(); it != Crosses.end(); it++) {
-		// 初始化 total_roads
+		// 初始化 total_roads_from
 		for (int i = 0; i < 4; i++) {
 			Road* road = it->second->getRoad(i);
 			if (road == nullptr) continue;
 			if (road->from == it->second->id && road->isDuplex == 0) continue;
-			it->second->total_roads++;
+			it->second->total_roads_from++;
+		}
+		// 初始化 total_roads_to
+		for (int i = 0; i < 4; i++) {
+			Road* road = it->second->getRoad(i);
+			if (road == nullptr) continue;
+			if (road->to == it->second->id && road->isDuplex == 0) continue;
+			it->second->total_roads_to++;
 		}
 	}
 
@@ -256,6 +269,9 @@ void dispatchCarsOnRoad() {
 				Car* car = roadMap[i][j];
 				if (car == nullptr) continue;
 
+				car->deadlock.waitingTime = 0;
+				car->deadlock.crowded_roads.clear();
+				car->deadlock.crowded_roads.push_back(road->id);
 				int speed = road->speed > car->speed ? car->speed : road->speed;
 				for (int k = j + 1; ; k++) {
 					// 该车道前方没有车辆
@@ -313,7 +329,7 @@ void dispatchCarsOnRoad() {
 			if (road->from == cross->id && road->isDuplex == 0) continue;  // 单行道，无法进入路口
 
 			// 如果进入该路口的所有道路调度完毕，则该路口调度完毕
-			if (cross->dispatched_roads == cross->total_roads) {
+			if (cross->dispatched_roads == cross->total_roads_from) {
 				cross->dispatched_times++;
 				cross->dispatched_roads = 0;
 				dispatched_crosses++;
@@ -339,7 +355,7 @@ void dispatchCarsOnRoad() {
 }
 
 
-bool dispatch(Cross* cross, Road* road) {
+bool dispatch(Cross* cross, Road* road, bool isRedispatch) {
 	bool road_direction = !road->isPositiveDirection(cross->id);
 	if (road->carsWaitingForDispatched[road_direction ? 0 : 1].empty()) return true;
 	Car* car = road->carsWaitingForDispatched[road_direction ? 0 : 1].front();
@@ -358,7 +374,22 @@ bool dispatch(Cross* cross, Road* road) {
 		return dispatch(cross, road);
 	}
 
-	car->status.nextRoadID = nextRoad[cross->id][car->to];
+	if (!isRedispatch) {
+		car->status.nextRoadID = nextRoad[cross->id][car->to];
+
+		// 不能掉头，换一条路
+		if (car->status.nextRoadID == car->status.roadID) {
+			Road* road;
+			for (int i = 0; i < 4; i++) {
+				if ((road = cross->getRoad(i)) != nullptr && road->id != car->status.nextRoadID && !(road->to == cross->id && road->isDuplex == 0)) {
+					car->status.nextRoadID = road->id;
+					break;
+				}
+			}
+		}
+	}
+	assert(car->status.roadID != car->status.nextRoadID);
+
 	if (conflict(cross, road, car)) 
 		return false;
 
@@ -374,7 +405,6 @@ bool dispatch(Cross* cross, Road* road) {
 			case -1:  // 车辆被阻塞在路口，位置更新至路口处
 				car->status.isWaiting = false;
 				road->carsWaitingForDispatched[road_direction ? 0 : 1].pop_front();
-				// car->answer.stopTime++;
 				road->roadMap[car->status.channelNum][car->status.location - 1] = nullptr;
 				assert(road->roadMap[car->status.channelNum][road->length - 1] == nullptr);
 				road->roadMap[car->status.channelNum][road->length - 1] = car;
@@ -382,6 +412,36 @@ bool dispatch(Cross* cross, Road* road) {
 				dispatchFollowingCars(cross, road, car->status.channelNum);
 				return dispatch(cross, road);
 			case -3:  // 车辆理论上能通过路口，但是前方有处于等待状态的车辆阻挡，等待下次调度
+				if (car->deadlock.waitingTime++ > 2) {  // 第三次的话就转向
+					if (find(car->deadlock.crowded_roads.begin(), car->deadlock.crowded_roads.end(), car->status.nextRoadID) == car->deadlock.crowded_roads.end()) car->deadlock.crowded_roads.push_back(car->status.nextRoadID);
+					if (car->deadlock.crowded_roads.size() == cross->total_roads_to) return false;
+
+					int front_road_id = cross->getFrontRoad(road);
+					int left_road_id = cross->getLeftRoad(road);
+					int right_road_id = cross->getRightRoad(road);
+					if (front_road_id != -1 && car->status.nextRoadID == front_road_id) {
+						if (left_road_id != -1 && !(Roads[left_road_id]->to == cross->id && Roads[left_road_id]->isDuplex == 0) && find(car->deadlock.crowded_roads.begin(), car->deadlock.crowded_roads.end(), left_road_id) == car->deadlock.crowded_roads.end())
+							car->status.nextRoadID = left_road_id;
+						else car->status.nextRoadID = right_road_id;
+						assert(car->status.nextRoadID != -1 && !(Roads[car->status.nextRoadID]->to == cross->id && Roads[car->status.nextRoadID]->isDuplex == 0));
+						return dispatch(cross, road, true);
+					}
+					else if (left_road_id != -1 && car->status.nextRoadID == left_road_id) {
+						if (right_road_id != -1 && !(Roads[right_road_id]->to == cross->id && Roads[right_road_id]->isDuplex == 0) && find(car->deadlock.crowded_roads.begin(), car->deadlock.crowded_roads.end(), right_road_id) == car->deadlock.crowded_roads.end())
+							car->status.nextRoadID = right_road_id;
+						else car->status.nextRoadID = front_road_id;
+						assert(car->status.nextRoadID != -1 && !(Roads[car->status.nextRoadID]->to == cross->id && Roads[car->status.nextRoadID]->isDuplex == 0));
+						return dispatch(cross, road, true);
+					}
+					else if (right_road_id != -1) {
+						if (front_road_id != -1 && !(Roads[front_road_id]->to == cross->id && Roads[front_road_id]->isDuplex == 0) && find(car->deadlock.crowded_roads.begin(), car->deadlock.crowded_roads.end(), front_road_id) == car->deadlock.crowded_roads.end())
+							car->status.nextRoadID = front_road_id;
+						else car->status.nextRoadID = left_road_id;
+						assert(car->status.nextRoadID != -1 && !(Roads[car->status.nextRoadID]->to == cross->id && Roads[car->status.nextRoadID]->isDuplex == 0));
+						return dispatch(cross, road, true);
+					}
+					assert(0);
+				}
 				return false;
 			default:  // 车辆穿过路口
 				assert(tmp.y > 0);
@@ -570,34 +630,55 @@ void floyd() {
 		G[road->from][road->to] = road->length;
 		G[road->to][road->from] = road->isDuplex == 1 ? road->length : MAX_ROAD_LENGTH;
 
-	// 先不考虑加权
-	// 	long double num = 0;
-	// 	for (int i = 0; i < road->channel; i++) {
-	// 		if (!road->roadMap[i].carsOnLane.empty()) {
-	// 			Lane* lane = &road->roadMap[i];
-	// 			for (auto it = lane->carsOnLane.begin(); it != lane->carsOnLane.end(); it++) {
-	// 				Car* car = *it;
-	// 				num += car->status.location*car->status.location;
-	// 				// num += pow(car->status.location, 1.2);
-	// 			}
-	// 		}
-	// 	}
-	// 	assert(num >= 0);
-	// 	road->length_weight[0] = num + 1;
-	// 	if (road->isDuplex) {
-	// 		for (int i = road->channel, num = 0; i < 2 * road->channel; i++) {
-	// 			if (!road->roadMap[i].carsOnLane.empty()) {
-	// 				Lane* lane = &road->roadMap[i];
-	// 				for (auto it = lane->carsOnLane.begin(); it != lane->carsOnLane.end(); it++) {
-	// 					Car* car = *it;
-	// 					num += car->status.location*car->status.location;
-	// 					// num += pow(car->status.location, 1.2);
-	// 				}
-	// 			}
-	// 		}
-	// 		assert(num >= 0);
-	// 		road->length_weight[1] = num + 1;
-	// 	}
+	    // //  考虑加权
+		// static const int scale = 1;
+		// int num_cars = 0, capacity = road->length * road->channel;
+		// for (int i = 0, num_cars = 0; i < road->channel; i++) {
+		// 	for (int j = 0; j < road->length; j++) {
+		// 		if (road->roadMap[i][j] != nullptr) {
+		// 			num_cars++;
+		// 		}
+		// 	}
+		// }
+		// road->length_weight[0] = pow(scale, (double)num_cars/capacity);
+		// if (road->isDuplex) {
+		// 	for (int i = road->channel, num_cars = 0; i < 2 * road->channel; i++) {
+		// 		for (int j = 0; j < road->length; j++) {
+		// 			if (road->roadMap[i][j] != nullptr) {
+		// 				num_cars++;
+		// 			}
+		// 		}
+		// 	}
+		// 	road->length_weight[1] = pow(scale, (double)num_cars/capacity);
+		// }
+
+		// long double num = 0;
+		// for (int i = 0; i < road->channel; i++) {
+		// 	if (!road->roadMap[i].carsOnLane.empty()) {
+		// 		Lane* lane = &road->roadMap[i];
+		// 		for (auto it = lane->carsOnLane.begin(); it != lane->carsOnLane.end(); it++) {
+		// 			Car* car = *it;
+		// 			num += car->status.location*car->status.location;
+		// 			// num += pow(car->status.location, 1.2);
+		// 		}
+		// 	}
+		// }
+		// assert(num >= 0);
+		// road->length_weight[0] = num + 1;
+		// if (road->isDuplex) {
+		// 	for (int i = road->channel, num = 0; i < 2 * road->channel; i++) {
+		// 		if (!road->roadMap[i].carsOnLane.empty()) {
+		// 			Lane* lane = &road->roadMap[i];
+		// 			for (auto it = lane->carsOnLane.begin(); it != lane->carsOnLane.end(); it++) {
+		// 				Car* car = *it;
+		// 				num += car->status.location*car->status.location;
+		// 				// num += pow(car->status.location, 1.2);
+		// 			}
+		// 		}
+		// 	}
+		// 	assert(num >= 0);
+		// 	road->length_weight[1] = num + 1;
+		// }
 
 
 		// G[road->from][road->to] = road->length * road->length_weight[0];
