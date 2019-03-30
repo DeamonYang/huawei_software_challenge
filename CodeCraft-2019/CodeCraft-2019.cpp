@@ -412,7 +412,7 @@ bool dispatch(Cross* cross, Road* road, bool isRedispatch) {
 				dispatchFollowingCars(cross, road, car->status.channelNum);
 				return dispatch(cross, road);
 			case -3:  // 车辆理论上能通过路口，但是前方有处于等待状态的车辆阻挡，等待下次调度
-				if (car->deadlock.waitingTime++ > 2) {  // 第三次的话就转向
+				if (car->deadlock.waitingTime++ > 5) {  // 第三次的话就转向
 					if (find(car->deadlock.crowded_roads.begin(), car->deadlock.crowded_roads.end(), car->status.nextRoadID) == car->deadlock.crowded_roads.end()) car->deadlock.crowded_roads.push_back(car->status.nextRoadID);
 					if (car->deadlock.crowded_roads.size() == cross->total_roads_to) return false;
 

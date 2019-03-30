@@ -24,7 +24,7 @@ bool Car::ready() {
         startedCars = 0;
     }
 
-    if (currentTime <= 1000) { if (CarsRunning.size() >= 8000) return false; }
+    if (currentTime <= 1000) { if (CarsRunning.size() >= 3000) return false; }
     // else if (currentTime <= 2000) { if (CarsRunning.size() >= 8000) return false; }
 
     if (currentTime <= 10) { if (speed < 14) return false; }
