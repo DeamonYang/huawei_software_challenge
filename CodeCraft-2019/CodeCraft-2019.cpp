@@ -17,6 +17,7 @@ list<Car*> CarsNotReady, CarsReady, CarsRunning;
 map<int, Car*> Cars;
 map<int, Road*> Roads;
 map<int, Cross*> Crosses;
+map<int, int> crossId2Num;
 
 int **G, **D, **nextRoad;
 
@@ -113,12 +114,9 @@ void read_data(string carPath, string roadPath, string crossPath) {
 		}
 		// 初始化对象
 		Cars[value.at(0)] = new Car(value.at(0), value.at(1), value.at(2), value.at(3), value.at(4));
-		// CarsReady.push_back(Cars[value.at(0)]);
 		CarsNotReady.push_back(Cars[value.at(0)]);
-		// if (value.at(4) > 10) exit(1);
 	}
 	fcar.close();
-	// if (Cars.size() > 20000) exit(1);
 
 	// 读取并解析数据: Roads
 	while (froad.getline(buffer, MAX_LINE_LENGTH)) {
@@ -141,9 +139,9 @@ void read_data(string carPath, string roadPath, string crossPath) {
 		Roads[value.at(0)] = new Road(value.at(0), value.at(1), value.at(2), value.at(3), value.at(4), value.at(5), value.at(6));
 	}
 	froad.close();
-	// if (Roads.size() > 200) exit(1);
 
 	// 读取并解析数据: Crosses
+	int num = 1;
 	while (fcross.getline(buffer, MAX_LINE_LENGTH)) {
 		if (buffer[0] == '#') continue;
 		int int_start = 0, len = strlen(buffer);
@@ -161,16 +159,37 @@ void read_data(string carPath, string roadPath, string crossPath) {
 			}
 		}
 		// 初始化对象
-		Crosses[value.at(0)] = new Cross(value.at(0), value.at(1), value.at(2), value.at(3), value.at(4));
+		Crosses[num] = new Cross(num, value.at(1), value.at(2), value.at(3), value.at(4));
+		crossId2Num[value.at(0)] = num;
+		num++;
 	}
 	fcross.close();
-	// if (Crosses.size() > 200) exit(1);
 }
 
 void preprocess() {
+	// 适配不连续的cross_id
+	for (auto it = Roads.begin(); it != Roads.end(); it++) {
+		Road* road = it->second;
+		road->from = crossId2Num[road->from];
+		road->to = crossId2Num[road->to];
+	}
+	for (auto it = Cars.begin(); it != Cars.end(); it++) {
+		Car* car = it->second;
+		car->from = crossId2Num[car->from];
+		car->to = crossId2Num[car->to];
+	}
+	for (auto it = Crosses.begin(); it != Crosses.end(); it++) {
+		// 初始化 total_roads
+		for (int i = 0; i < 4; i++) {
+			Road* road = it->second->getRoad(i);
+			if (road == nullptr) continue;
+			if (road->from == it->second->id && road->isDuplex == 0) continue;
+			it->second->total_roads++;
+		}
+	}
+
 	int num_crosses = Crosses.size();
 	// 分配空间
-	// 这里假定cross的id是从1开始顺下去的
 	G = new int*[num_crosses + 1];
 	D = new int*[num_crosses + 1];
 	nextRoad = new int*[num_crosses + 1];

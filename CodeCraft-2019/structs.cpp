@@ -269,14 +269,6 @@ Cross::Cross(int id, int roadId1, int roadId2, int roadId3, int roadId4) {
         int tmp = (int)(find(roadIdRanked, roadIdRanked + 4, roadId[i]) - roadIdRanked);
         rankDist[tmp] = i;
     }
-
-    // 初始化 total_roads
-    for (int i = 0; i < 4; i++) {
-        Road* road = getRoad(i);
-        if (road == nullptr) continue;
-        if (road->from == id && road->isDuplex == 0) continue;
-        total_roads++;
-    }
 }
 
 Road* Cross::getRoad(int num) {

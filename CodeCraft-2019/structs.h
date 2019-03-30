@@ -93,6 +93,7 @@ extern list<Car*> CarsNotReady, CarsReady, CarsRunning;
 extern map<int, Car*> Cars;
 extern map<int, Road*> Roads;
 extern map<int, Cross*> Crosses;
+extern map<int, int> crossId2Num;
 
 extern int **G, **D, **nextRoad;
 
