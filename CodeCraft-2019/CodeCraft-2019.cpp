@@ -17,6 +17,7 @@ list<Car*> CarsNotReady, CarsReady, CarsRunning;
 map<int, Car*> Cars;
 map<int, Road*> Roads;
 map<int, Cross*> Crosses;
+map<int, int> crossId2Num;
 
 int **G, **D, **nextRoad;
 
@@ -93,8 +94,36 @@ void read_data(string carPath, string roadPath, string crossPath) {
 	ifstream froad(roadPath.c_str());
 	ifstream fcross(crossPath.c_str());
 
-	// 读取并解析数据: Cars
 	char buffer[MAX_LINE_LENGTH];
+	
+	// 读取并解析数据: Crosses
+	int num = 1;
+	while (fcross.getline(buffer, MAX_LINE_LENGTH)) {
+		if (buffer[0] == '#') continue;
+		int int_start = 0, len = strlen(buffer);
+		vector<int> value;
+		for (int i = 0; i < len; i++) {
+			// 每个数字前面的字符都为'('或' '
+			if (buffer[i] == '(' || buffer[i] == ' ') {
+				int_start = i + 1;
+			}
+			// 每个数字后面的字符都为'）'或','
+			// 并将该字符替换为'\0'以截断字符串，从而将char[]转换为int，存入队列中
+			else if (buffer[i] == ')' || buffer[i] == ',') {
+				buffer[i] = '\0';
+				value.push_back(atoi(buffer + int_start));
+			}
+		}
+		// 初始化对象
+		// Crosses[value.at(0)] = new Cross(value.at(0), value.at(1), value.at(2), value.at(3), value.at(4));
+		Crosses[num] = new Cross(num, value.at(1), value.at(2), value.at(3), value.at(4));
+		crossId2Num[value.at(0)] = num;
+		num++;
+	}
+	fcross.close();
+	// if (Crosses.size() > 200) exit(1);
+
+	// 读取并解析数据: Cars
 	while (fcar.getline(buffer, MAX_LINE_LENGTH)) {
 		if (buffer[0] == '#') continue;
 		int int_start = 0, len = strlen(buffer);
@@ -142,29 +171,6 @@ void read_data(string carPath, string roadPath, string crossPath) {
 	}
 	froad.close();
 	// if (Roads.size() > 200) exit(1);
-
-	// 读取并解析数据: Crosses
-	while (fcross.getline(buffer, MAX_LINE_LENGTH)) {
-		if (buffer[0] == '#') continue;
-		int int_start = 0, len = strlen(buffer);
-		vector<int> value;
-		for (int i = 0; i < len; i++) {
-			// 每个数字前面的字符都为'('或' '
-			if (buffer[i] == '(' || buffer[i] == ' ') {
-				int_start = i + 1;
-			}
-			// 每个数字后面的字符都为'）'或','
-			// 并将该字符替换为'\0'以截断字符串，从而将char[]转换为int，存入队列中
-			else if (buffer[i] == ')' || buffer[i] == ',') {
-				buffer[i] = '\0';
-				value.push_back(atoi(buffer + int_start));
-			}
-		}
-		// 初始化对象
-		Crosses[value.at(0)] = new Cross(value.at(0), value.at(1), value.at(2), value.at(3), value.at(4));
-	}
-	fcross.close();
-	// if (Crosses.size() > 200) exit(1);
 }
 
 void preprocess() {

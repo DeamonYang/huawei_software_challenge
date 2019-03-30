@@ -5,8 +5,9 @@ using namespace std;
 // Car
 Car::Car(int id, int from, int to, int speed, int planTime) {
     Car::id = id;
-    Car::from = from;
-    Car::to = to;
+    assert(crossId2Num[from] == from && crossId2Num[to] == to);
+    Car::from = crossId2Num[from];
+    Car::to = crossId2Num[to];
     Car::speed = speed;
     Car::planTime = planTime;
     Car::status.roadID = -2;
@@ -153,8 +154,9 @@ Road::Road(int id, int length, int speed, int channel, int from, int to, int isD
     Road::length = length;
     Road::speed = speed;
     Road::channel = channel;
-    Road::from = from;
-    Road::to = to;
+    assert(crossId2Num[from] == from && crossId2Num[to] == to);
+    Road::from = crossId2Num[from];
+    Road::to = crossId2Num[to];
     Road::isDuplex = isDuplex;
 
     roadMap = new Car**[channel * (1 + isDuplex)];
