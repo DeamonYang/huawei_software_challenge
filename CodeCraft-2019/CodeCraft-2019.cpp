@@ -207,7 +207,10 @@ void process() {
 	// 开始进行系统调度
 	for (currentTime = 0; finished_cars < Cars.size(); currentTime++) {
 		#ifdef DEBUG
-		cout << "currentTime: " << currentTime << endl;;
+		static int last_running = 0, last_finished = 0;
+		cout << "currentTime: " << currentTime << "\t deltaCarsRunning: " << (int)CarsRunning.size() - last_running << "\t deltaCarsFinished: " << finished_cars - last_finished << endl;
+		last_running = CarsRunning.size();
+		last_finished = finished_cars;
 		vector<int2> status;
 		for (auto it = CarsRunning.begin(); it != CarsRunning.end(); it++) {
 			status.push_back({(*it)->status.roadID, (*it)->status.location});
