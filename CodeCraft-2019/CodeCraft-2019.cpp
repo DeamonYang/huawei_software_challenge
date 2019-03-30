@@ -208,7 +208,7 @@ void process() {
 	for (currentTime = 0; finished_cars < Cars.size(); currentTime++) {
 		#ifdef DEBUG
 		static int last_running = 0, last_finished = 0;
-		cout << "currentTime: " << currentTime << "\t deltaCarsRunning: " << (int)CarsRunning.size() - last_running << "\t deltaCarsFinished: " << finished_cars - last_finished << endl;
+		cout << "currentTime: " << currentTime << "\t CarsReady: " << CarsReady.size() << "\t CarsRunning: " << CarsRunning.size() << "\t startedCars: " << (int)CarsRunning.size() - last_running + finished_cars - last_finished << "\t deltaCarsRunning: " << (int)CarsRunning.size() - last_running << "\t deltaCarsFinished: " << finished_cars - last_finished << endl;
 		last_running = CarsRunning.size();
 		last_finished = finished_cars;
 		vector<int2> status;
