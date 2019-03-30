@@ -1,5 +1,4 @@
 *.exe
-*.gz
 .vscode
 bin
 build

@@ -32,9 +32,9 @@ bool Car::ready() {
 
     if (currentTime <= 10) { if (startedCars >= 800/currentTime) return false; }
     else if (currentTime <= 100) { if (startedCars >= 70) return false; }
-    else if (currentTime <= 500) { if (startedCars >= 50) return false; }
-    else if (currentTime <= 1000) { if (startedCars >= 30) return false; }
-    else { if (startedCars >= 30) return false; }
+    else if (currentTime <= 500) { if (startedCars >= 60) return false; }
+    else if (currentTime <= 1000) { if (startedCars >= 35) return false; }
+    else { if (startedCars >= 35) return false; }
 
     // int2 tmp = road->getFreeLength(from);
     // if (tmp.x > 0 && tmp.y < road_speed) return false;
